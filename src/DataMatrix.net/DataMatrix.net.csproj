@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
+		<PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+		<PackageId>DataMatrix.net</PackageId>
+		<Authors>Michael Faschinger</Authors>
+		<Version>0.5.0</Version>
+		<PackageProjectUrl>https://github.com/xas/DataMatrix.NET</PackageProjectUrl>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Drawing.Common" Version="5.0.2" />
+		<PackageReference Include="System.Drawing.Primitives" Version="4.3.0" />
+	</ItemGroup>
+
+</Project>
