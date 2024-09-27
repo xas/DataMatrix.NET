@@ -34,39 +34,18 @@ namespace DataMatrix.net
 {
     internal struct DmtxScanGrid
     {
-        #region Fields
-        int _minExtent;
-        int _maxExtent;
-        int _xOffset;
-        int _yOffset;
-        int _xMin;
-        int _xMax;
-        int _yMin;
-        int _yMax;
-
-        int _total;
-        int _extent;
-        int _jumpSize;
-        int _pixelTotal;
-        int _startPos;
-
-        int _pixelCount;
-        int _xCenter;
-        int _yCenter;
-        #endregion
-
         #region Constructors
         internal DmtxScanGrid(DmtxDecode dec)
         {
             int smallestFeature = dec.ScanGap;
-            this._xMin = dec.XMin;
-            this._xMax = dec.XMax;
-            this._yMin = dec.YMin;
-            this._yMax = dec.YMax;
+            XMin = dec.XMin;
+            XMax = dec.XMax;
+            YMin = dec.YMin;
+            YMax = dec.YMax;
 
             /* Values that get set once */
-            int xExtent = this._xMax - this._xMin;
-            int yExtent = this._yMax - this._yMin;
+            int xExtent = XMax - XMin;
+            int yExtent = YMax - YMin;
             int maxExtent = (xExtent > yExtent) ? xExtent : yExtent;
 
             if (maxExtent < 1)
@@ -75,29 +54,29 @@ namespace DataMatrix.net
             }
 
             int extent = 1;
-            this._minExtent = extent;
+            MinExtent = extent;
             for (; extent < maxExtent; extent = ((extent + 1) * 2) - 1)
             {
                 if (extent <= smallestFeature)
                 {
-                    _minExtent = extent;
+                    MinExtent = extent;
                 }
             }
 
-            this._maxExtent = extent ;
+            MaxExtent = extent ;
 
-            this._xOffset = (this._xMin + this._xMax - this._maxExtent) / 2;
-            this._yOffset = (this._yMin + this._yMax - this._maxExtent) / 2;
+            XOffset = (XMin + XMax - MaxExtent) / 2;
+            YOffset = (YMin + YMax - MaxExtent) / 2;
 
             /* Values that get reset for every level */
-            this._total = 1;
-            this._extent = this._maxExtent;
+            Total = 1;
+            Extent = MaxExtent;
 
-            this._jumpSize = this._extent + 1;
-            this._pixelTotal = 2 * this._extent - 1;
-            this._startPos = this._extent / 2;
-            this._pixelCount = 0;
-            this._xCenter = this._yCenter = this._startPos;
+            JumpSize = Extent + 1;
+            PixelTotal = 2 * Extent - 1;
+            StartPos = Extent / 2;
+            PixelCount = 0;
+            XCenter = YCenter = StartPos;
 
             SetDerivedFields();
         }
@@ -114,7 +93,7 @@ namespace DataMatrix.net
                 locStatus = GetGridCoordinates(ref loc);
 
                 /* Always leave grid pointing at next available location */
-                this._pixelCount++;
+                PixelCount++;
 
             } while (locStatus == DmtxRange.DmtxRangeBad);
 
@@ -128,75 +107,75 @@ namespace DataMatrix.net
              * state before testing coordinates */
 
             /* Jump to next cross pattern horizontally if current column is done */
-            if (this._pixelCount >= this._pixelTotal)
+            if (PixelCount >= PixelTotal)
             {
-                this._pixelCount = 0;
-                this._xCenter += this._jumpSize;
+                PixelCount = 0;
+                XCenter += JumpSize;
             }
 
             /* Jump to next cross pattern vertically if current row is done */
-            if (this._xCenter > this._maxExtent)
+            if (XCenter > MaxExtent)
             {
-                this._xCenter = this._startPos;
-                this._yCenter += this._jumpSize;
+                XCenter = StartPos;
+                YCenter += JumpSize;
             }
 
             /* Increment level when vertical step goes too far */
-            if (this._yCenter > this._maxExtent)
+            if (YCenter > MaxExtent)
             {
-                this._total *= 4;
-                this._extent /= 2;
+                Total *= 4;
+                Extent /= 2;
                 SetDerivedFields();
             }
 
-            if (this._extent == 0 || this._extent < this._minExtent)
+            if (Extent == 0 || Extent < MinExtent)
             {
                 locRef.X = locRef.Y = -1;
                 return DmtxRange.DmtxRangeEnd;
             }
 
-            int count = this._pixelCount;
+            int count = PixelCount;
 
-            if (count >= this._pixelTotal)
+            if (count >= PixelTotal)
             {
-                throw new Exception("Scangrid is beyong image limits!");
+                throw new InvalidOperationException("Scangrid is beyong image limits!");
             }
 
             DmtxPixelLoc loc = new DmtxPixelLoc();
-            if (count == this._pixelTotal - 1)
+            if (count == PixelTotal - 1)
             {
                 /* center pixel */
-                loc.X = this._xCenter;
-                loc.Y = this._yCenter;
+                loc.X = XCenter;
+                loc.Y = YCenter;
             }
             else
             {
-                int half = this._pixelTotal / 2;
+                int half = PixelTotal / 2;
                 int quarter = half / 2;
 
                 /* horizontal portion */
                 if (count < half)
                 {
-                    loc.X = this._xCenter + ((count < quarter) ? (count - quarter) : (half - count));
-                    loc.Y = this._yCenter;
+                    loc.X = XCenter + ((count < quarter) ? (count - quarter) : (half - count));
+                    loc.Y = YCenter;
                 }
                 /* vertical portion */
                 else
                 {
                     count -= half;
-                    loc.X = this._xCenter;
-                    loc.Y = this._yCenter + ((count < quarter) ? (count - quarter) : (half - count));
+                    loc.X = XCenter;
+                    loc.Y = YCenter + ((count < quarter) ? (count - quarter) : (half - count));
                 }
             }
 
-            loc.X += this._xOffset;
-            loc.Y += this._yOffset;
+            loc.X += XOffset;
+            loc.Y += YOffset;
 
             locRef.X = loc.X;
             locRef.Y = loc.Y;
 
-            if (loc.X < this._xMin || loc.X > this._xMax ||
-                  loc.Y < this._yMin || loc.Y > this._yMax)
+            if (loc.X < XMin || loc.X > XMax ||
+                  loc.Y < YMin || loc.Y > YMax)
             {
                 return DmtxRange.DmtxRangeBad;
             }
@@ -210,11 +189,11 @@ namespace DataMatrix.net
         /// </summary>
         private void SetDerivedFields()
         {
-            this._jumpSize = this._extent + 1;
-            this._pixelTotal = 2 * this._extent - 1;
-            this._startPos = this._extent / 2;
-            this._pixelCount = 0;
-            this._xCenter = this._yCenter = this._startPos;
+            JumpSize = Extent + 1;
+            PixelTotal = 2 * Extent - 1;
+            StartPos = Extent / 2;
+            PixelCount = 0;
+            XCenter = YCenter = StartPos;
         }
         #endregion
 
@@ -222,148 +201,84 @@ namespace DataMatrix.net
         /// <summary>
         ///  Smallest cross size used in scan
         /// </summary>
-        internal int MinExtent
-        {
-            get { return _minExtent; }
-            set { _minExtent = value; }
-        }
+        internal int MinExtent { get; private set; }
 
         /// <summary>
         /// Size of bounding grid region (2^N - 1)
         /// </summary>
-        internal int MaxExtent
-        {
-            get { return _maxExtent; }
-            set { _maxExtent = value; }
-        }
+        internal int MaxExtent { get; private set; }
 
         /// <summary>
         /// Offset to obtain image X coordinate
         /// </summary>
-        internal int XOffset
-        {
-            get { return _xOffset; }
-            set { _xOffset = value; }
-        }
+        internal int XOffset { get; private set; }
 
         /// <summary>
         /// Offset to obtain image Y coordinate
         /// </summary>
-        internal int YOffset
-        {
-            get { return _yOffset; }
-            set { _yOffset = value; }
-        }
+        internal int YOffset { get; private set; }
 
         /// <summary>
         ///  Minimum X in image coordinate system
         /// </summary>
-        internal int XMin
-        {
-            get { return _xMin; }
-            set { _xMin = value; }
-        }
+        internal int XMin { get; private set; }
 
 
         /// <summary>
         /// Maximum X in image coordinate system
         /// </summary>
-        internal int XMax
-        {
-            get { return _xMax; }
-            set { _xMax = value; }
-        }
+        internal int XMax { get; private set; }
 
         /// <summary>
         ///  Minimum Y in image coordinate system
         /// </summary>
-        internal int YMin
-        {
-            get { return _yMin; }
-            set { _yMin = value; }
-        }
+        internal int YMin { get; private set; }
 
         /// <summary>
         /// Maximum Y in image coordinate system
         /// </summary>
-        internal int YMax
-        {
-            get { return _yMax; }
-            set { _yMax = value; }
-        }
+        internal int YMax { get; private set; }
 
         /// <summary>
         ///  Total number of crosses at this size
         /// </summary>
-        internal int Total
-        {
-            get { return _total; }
-            set { _total = value; }
-        }
+        internal int Total { get; private set; }
 
         /// <summary>
         ///  Length/width of cross in pixels
         /// </summary>
-        internal int Extent
-        {
-            get { return _extent; }
-            set { _extent = value; }
-        }
+        internal int Extent { get; private set; }
 
         /// <summary>
         /// Distance in pixels between cross centers
         /// </summary>
-        internal int JumpSize
-        {
-            get { return _jumpSize; }
-            set { _jumpSize = value; }
-        }
+        internal int JumpSize { get; private set; }
 
         /// <summary>
         ///  Total pixel count within an individual cross path
         /// </summary>
-        internal int PixelTotal
-        {
-            get { return _pixelTotal; }
-            set { _pixelTotal = value; }
-        }
+        internal int PixelTotal { get; private set; }
 
         /// <summary>
         /// X and Y coordinate of first cross center in pattern
         /// </summary>
-        internal int StartPos
-        {
-            get { return _startPos; }
-            set { _startPos = value; }
-        }
+        internal int StartPos { get; private set; }
 
         /// <summary>
         /// Progress (pixel count) within current cross pattern
         /// </summary>
-        internal int PixelCount
-        {
-            get { return _pixelCount; }
-            set { _pixelCount = value; }
-        }
+        internal int PixelCount { get; private set; }
 
         /// <summary>
         /// X center of current cross pattern
         /// </summary>
-        internal int XCenter
-        {
-            get { return _xCenter; }
-            set { _xCenter = value; }
-        }
+        internal int XCenter { get; private set; }
 
 
         /// <summary>
         /// Y center of current cross pattern
         /// </summary>
-        internal int YCenter
-        {
-            get { return _yCenter; }
-            set { _yCenter = value; }
-        }
+        internal int YCenter { get; private set; }
         #endregion
     }
 }

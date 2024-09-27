@@ -37,14 +37,14 @@ namespace DataMatrix.net
         #region Constructors
         internal DmtxVector2()
         {
-            this.X = 0.0;
-            this.Y = 0.0;
+            X = 0.0;
+            Y = 0.0;
         }
 
         internal DmtxVector2(double x, double y)
         {
-            this.X = x;
-            this.Y = y;
+            X = x;
+            Y = y;
         }
         #endregion
 
@@ -74,7 +74,7 @@ namespace DataMatrix.net
         #region Methods
         internal double Cross(DmtxVector2 v2)
         {
-            return (this.X * v2.Y - this.Y * v2.X);
+            return (X * v2.Y - Y * v2.X);
         }
 
         internal double Norm()
@@ -84,19 +84,19 @@ namespace DataMatrix.net
             {
                 return -1.0; // FIXXXME: This doesn't look clean, as noted in original dmtx source
             }
-            this.X /= mag;
-            this.Y /= mag;
+            X /= mag;
+            Y /= mag;
             return mag;
         }
 
         internal double Dot(DmtxVector2 v2)
         {
-            return Math.Sqrt(this.X * v2.X + this.Y * v2.Y);
+            return Math.Sqrt(X * v2.X + Y * v2.Y);
         }
 
         internal double Mag()
         {
-            return Math.Sqrt(this.X * this.X + this.Y * this.Y);
+            return Math.Sqrt(X * X + Y * Y);
         }
 
         internal double DistanceFromRay2(DmtxRay2 ray)
@@ -135,8 +135,8 @@ namespace DataMatrix.net
                 throw new ArgumentException("PointAlongRay: The ray's V vector must be a unit vector");
             }
             DmtxVector2 tmp = new DmtxVector2(ray.V.X * t, ray.V.Y * t);
-            this.X = ray.P.X + tmp.X;
-            this.Y = ray.P.Y + tmp.Y;
+            X = ray.P.X + tmp.X;
+            Y = ray.P.Y + tmp.Y;
             return true;
         }
         #endregion

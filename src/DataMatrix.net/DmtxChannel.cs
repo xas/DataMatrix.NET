@@ -50,7 +50,7 @@ namespace DataMatrix.net
 
         internal byte[] EncodedWords
         {
-            get { return this._encodedWords ?? (this._encodedWords = new byte[1558]); }
+            get { return _encodedWords ?? (_encodedWords = new byte[1558]); }
         }
     }
 

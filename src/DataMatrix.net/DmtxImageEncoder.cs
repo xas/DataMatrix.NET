@@ -28,12 +28,12 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
+using SkiaSharp;
 using System.Collections.Generic;
-using System.Text;
 using System.Drawing;
-using System.Runtime.InteropServices;
-using System.Drawing.Imaging;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace DataMatrix.net
 {
@@ -44,28 +44,28 @@ namespace DataMatrix.net
         public static readonly Color DefaultBackColor = Color.White;
         public static readonly Color DefaultForeColor = Color.Black;
 
-        public Bitmap EncodeImageMosaic(string val)
+        public SKBitmap EncodeImageMosaic(string val)
         {
             return EncodeImageMosaic(val, DefaultDotSize);
         }
 
-        public Bitmap EncodeImageMosaic(string val, int dotSize)
+        public SKBitmap EncodeImageMosaic(string val, int dotSize)
         {
             return EncodeImageMosaic(val, dotSize, DefaultMargin);
         }
 
-        public Bitmap EncodeImageMosaic(string val, int dotSize, int margin)
+        public SKBitmap EncodeImageMosaic(string val, int dotSize, int margin)
         {
             DmtxImageEncoderOptions options = new DmtxImageEncoderOptions {MarginSize = margin, ModuleSize = dotSize};
             return EncodeImageMosaic(val, options);
         }
 
-        public Bitmap EncodeImageMosaic(string val, DmtxImageEncoderOptions options)
+        public SKBitmap EncodeImageMosaic(string val, DmtxImageEncoderOptions options)
         {
             return EncodeImage(val, options, true);
         }
 
-        private Bitmap EncodeImage(string val, DmtxImageEncoderOptions options, bool isMosaic)
+        private SKBitmap EncodeImage(string val, DmtxImageEncoderOptions options, bool isMosaic)
         {
             DmtxEncode encode = new DmtxEncode
                                     {
@@ -82,7 +82,7 @@ namespace DataMatrix.net
             {
                 encode.EncodeDataMatrix(options.ForeColor, options.BackColor, valAsByteArray);
             }
-            return CopyDataToBitmap(encode.Image.Pxl, encode.Image.Width, encode.Image.Height);
+            return CopyDataToSKBitmap(encode.Image.Pxl, encode.Image.Width, encode.Image.Height);
         }
 
         private static byte[] GetRawDataAndSetEncoding(string code, DmtxImageEncoderOptions options, DmtxEncode encode)
@@ -91,7 +91,7 @@ namespace DataMatrix.net
             encode.Scheme = options.Scheme;
             if (options.Scheme == DmtxScheme.DmtxSchemeAsciiGS1)
             {
-                List<byte> prefixedRawData = new List<byte>(new[] { (byte)232 });
+                List<byte> prefixedRawData = new([232]);
                 prefixedRawData.AddRange(result);
                 result = prefixedRawData.ToArray();
                 encode.Scheme = DmtxScheme.DmtxSchemeAscii;
@@ -99,23 +99,23 @@ namespace DataMatrix.net
             return result;
         }
 
-        public Bitmap EncodeImage(string val)
+        public SKBitmap EncodeImage(string val)
         {
             return EncodeImage(val, DefaultDotSize, DefaultMargin);
         }
 
-        public Bitmap EncodeImage(string val, int dotSize)
+        public SKBitmap EncodeImage(string val, int dotSize)
         {
             return EncodeImage(val, dotSize, DefaultMargin);
         }
 
-        public Bitmap EncodeImage(string val, int dotSize, int margin)
+        public SKBitmap EncodeImage(string val, int dotSize, int margin)
         {
-            DmtxImageEncoderOptions options = new DmtxImageEncoderOptions {MarginSize = margin, ModuleSize = dotSize};
+            DmtxImageEncoderOptions options = new() {MarginSize = margin, ModuleSize = dotSize};
             return EncodeImage(val, options);
         }
 
-        public Bitmap EncodeImage(string val, DmtxImageEncoderOptions options)
+        public SKBitmap EncodeImage(string val, DmtxImageEncoderOptions options)
         {
             return EncodeImage(val, options, false);
         }
@@ -137,7 +137,7 @@ namespace DataMatrix.net
 
         public string EncodeSvgImage(string val, int dotSize, int margin, Color foreColor, Color backColor)
         {
-            DmtxImageEncoderOptions options = new DmtxImageEncoderOptions
+            DmtxImageEncoderOptions options = new()
                                                   {
                                                       ModuleSize = dotSize,
                                                       MarginSize = margin,
@@ -147,6 +147,23 @@ namespace DataMatrix.net
             return EncodeSvgImage(val, options);
         }
 
+        public string EncodeSvgImage(string val, DmtxImageEncoderOptions options)
+        {
+            DmtxEncode encode = new()
+            {
+                ModuleSize = options.ModuleSize,
+                MarginSize = options.MarginSize,
+                SizeIdxRequest = options.SizeIdx,
+                Scheme = options.Scheme
+            };
+
+            byte[] valAsByteArray = GetRawDataAndSetEncoding(val, options, encode);
+
+            encode.EncodeDataMatrix(options.ForeColor, options.BackColor, valAsByteArray);
+
+            return EncodeSvgFile(encode, "", options.ModuleSize, options.MarginSize, options.ForeColor, options.BackColor);
+        }
+
         public bool[,] EncodeRawData(string val)
         {
             return EncodeRawData(val, new DmtxImageEncoderOptions());
@@ -154,7 +171,7 @@ namespace DataMatrix.net
 
         public bool[,] EncodeRawData(string val, DmtxImageEncoderOptions options)
         {
-            DmtxEncode encode = new DmtxEncode
+            DmtxEncode encode = new()
                                     {
                                         ModuleSize = 1,
                                         MarginSize = 0,
@@ -169,32 +186,19 @@ namespace DataMatrix.net
             return encode.RawData;
         }
 
-        public string EncodeSvgImage(string val, DmtxImageEncoderOptions options)
+        internal static SKBitmap CopyDataToSKBitmap(byte[] data, int width, int height)
         {
-            DmtxEncode encode = new DmtxEncode
-                                    {
-                                        ModuleSize = options.ModuleSize,
-                                        MarginSize = options.MarginSize,
-                                        SizeIdxRequest = options.SizeIdx,
-                                        Scheme = options.Scheme
-                                    };
+            //data = InsertPaddingBytes(data, width, height, 32);
 
-            byte[] valAsByteArray = GetRawDataAndSetEncoding(val, options, encode);
+            SKBitmap bitmap = new();
 
-            encode.EncodeDataMatrix(options.ForeColor, options.BackColor, valAsByteArray);
+            // pin the managed array so that the GC doesn't move it
+            var gcHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
 
-            return EncodeSvgFile(encode, "", options.ModuleSize, options.MarginSize, options.ForeColor, options.BackColor);
-        }
-
-        internal static Bitmap CopyDataToBitmap(byte[] data, int width, int height)
-        {
-            data = InsertPaddingBytes(data, width, height, 24);
-
-            Bitmap bmp = new Bitmap(width, height);
-            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-            Marshal.Copy(data, 0, bmpData.Scan0, data.Length);
-            bmp.UnlockBits(bmpData);
-            return bmp;
+            // install the pixels with the color type of the pixel data
+            var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+            bitmap.InstallPixels(info, gcHandle.AddrOfPinnedObject(), info.RowBytes, delegate { gcHandle.Free(); });
+            return bitmap;
         }
 
         private static byte[] InsertPaddingBytes(byte[] data, int width, int height, int bitsPerPixel)
@@ -226,7 +230,7 @@ namespace DataMatrix.net
 
         private static NumberFormatInfo _dotFormatProvider;
 
-        internal string EncodeSvgFile(DmtxEncode enc, string format, int moduleSize, int margin, Color foreColor, Color backColor)
+        internal static string EncodeSvgFile(DmtxEncode enc, string format, int moduleSize, int margin, Color foreColor, Color backColor)
         {
             bool defineOnly = false;
             string idString = null;
@@ -283,6 +287,7 @@ namespace DataMatrix.net
             }
 
             /* Write Data Matrix ON modules */
+            StringBuilder stb = new();
             for (int row = 0; row < enc.Region.SymbolRows; row++)
             {
                 int rowInv = enc.Region.SymbolRows - row - 1;
@@ -294,13 +299,16 @@ namespace DataMatrix.net
 
                     if ((module & DmtxConstants.DmtxModuleOn) != 0)
                     {
-                        outputString += string.Format("    <rect width=\"{0}\" height=\"{1}\" x=\"{2}\" y=\"{3}\" {4}/>\n",
-                              moduleSize, moduleSize,
-                              col * moduleSize + margin,
-                              rowInv * moduleSize + margin, style);
+                        stb.Append("    <rect width=\"").Append(moduleSize).Append('\"');
+                        stb.Append(" height=\"").Append(moduleSize).Append('\"');
+                        stb.Append(" x=\"").Append(col * moduleSize + margin).Append('\"');
+                        stb.Append(" y=\"").Append(rowInv * moduleSize + margin).Append('\"');
+                        stb.Append(' ').Append(style);
+                        stb.AppendLine("/>");
                     }
                 }
             }
+            outputString += stb.ToString();
 
             outputString += "  </symbol>\n";
 

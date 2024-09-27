@@ -28,6 +28,8 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
+using System;
+
 namespace DataMatrix.net
 {
     internal static class DmtxConstants
@@ -302,6 +304,7 @@ namespace DataMatrix.net
         DmtxRangeEnd
     }
 
+    [Flags]
     internal enum DmtxDirection
     {
         DmtxDirNone = 0x00,
@@ -328,6 +331,7 @@ namespace DataMatrix.net
         DmtxSchemeAsciiGS1
     }
 
+    [Flags]
     internal enum DmtxMaskBit
     {
         DmtxMaskBit8 = 0x01 << 0,
@@ -340,6 +344,7 @@ namespace DataMatrix.net
         DmtxMaskBit1 = 0x01 << 7
     }
 
+    [Flags]
     internal enum DmtxEdge
     {
         DmtxEdgeTop = 0x01 << 0,
@@ -348,6 +353,7 @@ namespace DataMatrix.net
         DmtxEdgeRight = 0x01 << 3
     }
 
+    [Flags]
     enum DmtxChannelStatus
     {
         DmtxChannelValid = 0x00,

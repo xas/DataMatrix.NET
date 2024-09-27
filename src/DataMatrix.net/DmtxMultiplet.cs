@@ -36,7 +36,7 @@ namespace DataMatrix.net
 
         internal byte[] Value
         {
-            get { return this._value ?? (this._value = new byte[3]); }
+            get { return _value ?? (_value = new byte[3]); }
         }
     }
 
@@ -50,7 +50,7 @@ namespace DataMatrix.net
 
         internal byte[] Value
         {
-            get { return this._value ?? (this._value = new byte[4]); }
+            get { return _value ?? (_value = new byte[4]); }
         }
     }
 }

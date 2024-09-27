@@ -35,7 +35,7 @@ namespace DataMatrix.net
     internal class DmtxMatrix3
     {
         #region Fields
-        double[,] _data;
+        private double[,] _data;
         #endregion
 
         #region Constructors

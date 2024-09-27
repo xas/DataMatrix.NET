@@ -46,7 +46,7 @@ namespace DataMatrix.net
             int step = GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribInterleavedBlocks, sizeIdx);
             if (blockErrorWords != symbolErrorWords / step)
             {
-                throw new Exception("Error generation reed solomon error correction");
+                throw new InvalidOperationException("Error generation reed solomon error correction");
             }
 
             for (int gI = 0; gI < g.Length; gI++)
@@ -93,7 +93,7 @@ namespace DataMatrix.net
 
                 if (bIndex != 0)
                 {
-                    throw new Exception("Error generation error correction code!");
+                    throw new InvalidOperationException("Error generation error correction code!");
                 }
             }
         }

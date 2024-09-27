@@ -36,46 +36,31 @@ namespace DataMatrix.net
 {
     internal class DmtxEncode
     {
-        #region Fields
-        int _method;
-        DmtxScheme _scheme;
-        DmtxSymbolSize _sizeIdxRequest;
-        int _marginSize;
-        int _moduleSize;
-        DmtxPackOrder _pixelPacking;
-        DmtxFlip _imageFlip;
-        int _rowPadBytes;
-        DmtxMessage _message;
-        DmtxImage _image;
-        DmtxRegion _region;
-        bool[,] _rawData;
-        #endregion
-
         #region Constructors
         internal DmtxEncode()
         {
-            this._scheme = DmtxScheme.DmtxSchemeAscii;
-            this._sizeIdxRequest = DmtxSymbolSize.DmtxSymbolSquareAuto;
-            this._marginSize = 10;
-            this._moduleSize = 5;
-            this._pixelPacking = DmtxPackOrder.DmtxPack24bppRGB;
-            this._imageFlip = DmtxFlip.DmtxFlipNone;
-            this._rowPadBytes = 0;
+            Scheme = DmtxScheme.DmtxSchemeAscii;
+            SizeIdxRequest = DmtxSymbolSize.DmtxSymbolSquareAuto;
+            MarginSize = 10;
+            ModuleSize = 5;
+            PixelPacking = DmtxPackOrder.DmtxPack32bppRGBX;
+            ImageFlip = DmtxFlip.DmtxFlipNone;
+            RowPadBytes = 0;
         }
 
         private DmtxEncode(DmtxEncode src)
         {
-            this._scheme = src._scheme;
-            this._sizeIdxRequest = src._sizeIdxRequest;
-            this._marginSize = src._marginSize;
-            this._moduleSize = src._moduleSize;
-            this._pixelPacking = src._pixelPacking;
-            this._imageFlip = src._imageFlip;
-            this._rowPadBytes = src._rowPadBytes;
-            this._image = src._image;
-            this._message = src._message;
-            this._method = src._method;
-            this._region = src._region;
+            Scheme = src.Scheme;
+            SizeIdxRequest = src.SizeIdxRequest;
+            MarginSize = src.MarginSize;
+            ModuleSize = src.ModuleSize;
+            PixelPacking = src.PixelPacking;
+            ImageFlip = src.ImageFlip;
+            RowPadBytes = src.RowPadBytes;
+            Image = src.Image;
+            Message = src.Message;
+            Method = src.Method;
+            Region = src.Region;
         }
 
         #endregion
@@ -97,7 +82,7 @@ namespace DataMatrix.net
             byte[] buf = new byte[4096];
 
             /* Encode input string into data codewords */
-            DmtxSymbolSize sizeIdx = this._sizeIdxRequest;
+            DmtxSymbolSize sizeIdx = SizeIdxRequest;
             int dataWordCount = EncodeDataCodewords(buf, inputString, ref sizeIdx);
             if (dataWordCount <= 0)
             {
@@ -107,50 +92,52 @@ namespace DataMatrix.net
             /* EncodeDataCodewords() should have updated any auto sizeIdx to a real one */
             if (sizeIdx == DmtxSymbolSize.DmtxSymbolSquareAuto || sizeIdx == DmtxSymbolSize.DmtxSymbolRectAuto)
             {
-                throw new Exception("Invalid symbol size for encoding!");
+                throw new InvalidOperationException("Invalid symbol size for encoding!");
             }
 
             /* Add pad characters to match a standard symbol size (whether smallest or requested) */
-            int padCount = this.AddPadChars(buf, ref dataWordCount, DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribSymbolDataWords, sizeIdx));
+            int padCount = AddPadChars(buf, ref dataWordCount, DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribSymbolDataWords, sizeIdx));
 
             /* XXX we can remove a lot of this redundant data */
-            this._region = new DmtxRegion();
-            this._region.SizeIdx = sizeIdx;
-            this._region.SymbolRows = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribSymbolRows, sizeIdx);
-            this._region.SymbolCols = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribSymbolCols, sizeIdx);
-            this._region.MappingRows = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixRows, sizeIdx);
-            this._region.MappingCols = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixCols, sizeIdx);
+            Region = new()
+            {
+                SizeIdx = sizeIdx,
+                SymbolRows = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribSymbolRows, sizeIdx),
+                SymbolCols = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribSymbolCols, sizeIdx),
+                MappingRows = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixRows, sizeIdx),
+                MappingCols = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixCols, sizeIdx)
+            };
 
             /* Allocate memory for message and array */
-            this._message = new DmtxMessage(sizeIdx, DmtxFormat.Matrix) { PadCount = padCount };
+            Message = new DmtxMessage(sizeIdx, DmtxFormat.Matrix) { PadCount = padCount };
             for (int i = 0; i < dataWordCount; i++)
             {
-                this._message.Code[i] = buf[i];
+                Message.Code[i] = buf[i];
             }
 
             /* Generate error correction codewords */
-            DmtxCommon.GenReedSolEcc(this._message, this._region.SizeIdx);
+            DmtxCommon.GenReedSolEcc(Message, Region.SizeIdx);
 
             /* Module placement in region */
-            DmtxDecode.ModulePlacementEcc200(this._message.Array, this._message.Code,
-                  this._region.SizeIdx, DmtxConstants.DmtxModuleOnRGB);
+            DmtxDecode.ModulePlacementEcc200(Message.Array, Message.Code,
+                  Region.SizeIdx, DmtxConstants.DmtxModuleOnRGB);
 
-            int width = 2 * this._marginSize + (this._region.SymbolCols * this._moduleSize);
-            int height = 2 * this._marginSize + (this._region.SymbolRows * this._moduleSize);
-            int bitsPerPixel = DmtxCommon.GetBitsPerPixel(this._pixelPacking);
+            int width = 2 * MarginSize + (Region.SymbolCols * ModuleSize);
+            int height = 2 * MarginSize + (Region.SymbolRows * ModuleSize);
+            int bitsPerPixel = DmtxCommon.GetBitsPerPixel(PixelPacking);
             if (bitsPerPixel == DmtxConstants.DmtxUndefined)
                 return false;
             if (bitsPerPixel % 8 != 0)
             {
-                throw new Exception("Invalid color depth for encoding!");
+                throw new InvalidOperationException("Invalid color depth for encoding!");
             }
 
             /* Allocate memory for the image to be generated */
             // pxl = (unsigned char *)malloc(width * height * (bitsPerPixel/8) + enc->rowPadBytes);
-            byte[] pxl = new byte[width * height * (bitsPerPixel / 8) + this._rowPadBytes];
+            byte[] pxl = new byte[width * height * (bitsPerPixel / 8) + RowPadBytes];
 
-            this._image = new DmtxImage(pxl, width, height, this._pixelPacking)
-            { ImageFlip = this._imageFlip, RowPadBytes = this._rowPadBytes };
+            Image = new DmtxImage(pxl, width, height, PixelPacking)
+            { ImageFlip = ImageFlip, RowPadBytes = RowPadBytes };
 
             /* Insert finder and aligment pattern modules */
             if (encodeRaw)
@@ -184,9 +171,9 @@ namespace DataMatrix.net
              */
 
             /* Encode full input string to establish baseline data codeword count */
-            DmtxSymbolSize sizeIdx = sizeIdxRequest = this._sizeIdxRequest;
+            DmtxSymbolSize sizeIdx = sizeIdxRequest = SizeIdxRequest;
             /* XXX buf can be changed here to use all 3 buffers' length */
-            int dataWordCount = this.EncodeDataCodewords(buf[0], inputString, ref sizeIdx);
+            int dataWordCount = EncodeDataCodewords(buf[0], inputString, ref sizeIdx);
             if (dataWordCount <= 0)
                 return false;
 
@@ -198,7 +185,7 @@ namespace DataMatrix.net
             /* XXX clean up above lines later for corner cases */
 
             /* Use 1/3 (floor) of dataWordCount establish first symbol size attempt */
-            DmtxSymbolSize splitSizeIdxFirst = this.FindCorrectSymbolSize(tmpInputSize, sizeIdxRequest);
+            DmtxSymbolSize splitSizeIdxFirst = FindCorrectSymbolSize(tmpInputSize, sizeIdxRequest);
             if (splitSizeIdxFirst == DmtxSymbolSize.DmtxSymbolShapeAuto)
                 return false;
 
@@ -260,7 +247,7 @@ namespace DataMatrix.net
                 break;
             }
 
-            this._sizeIdxRequest = splitSizeIdxAttempt;
+            SizeIdxRequest = splitSizeIdxAttempt;
 
             /* Now we have the correct lengths for splitInputSize, and they all fit into the desired size */
             DmtxEncode encGreen = new DmtxEncode(this);
@@ -273,11 +260,11 @@ namespace DataMatrix.net
 
             int mappingRows = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixRows, splitSizeIdxAttempt);
             int mappingCols = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixCols, splitSizeIdxAttempt);
-            for (int i = 0; i < this._region.MappingCols * this._region.MappingRows; i++)
+            for (int i = 0; i < Region.MappingCols * Region.MappingRows; i++)
             {
-                this._message.Array[i] = 0;
+                Message.Array[i] = 0;
             }
-            DmtxDecode.ModulePlacementEcc200(this._message.Array, this._message.Code, this._region.SizeIdx, DmtxConstants.DmtxModuleOnRed);
+            DmtxDecode.ModulePlacementEcc200(Message.Array, Message.Code, Region.SizeIdx, DmtxConstants.DmtxModuleOnRed);
             //string s = Encoding.ASCII.GetString(_array);
             //Console.WriteLine(s);
             /* Data Mosaic will traverse this array multiple times -- reset
@@ -286,11 +273,11 @@ namespace DataMatrix.net
             {
                 for (col = 0; col < mappingCols; col++)
                 {
-                    this._message.Array[row * mappingCols + col] &= (byte)(0xff ^ (DmtxConstants.DmtxModuleAssigned | DmtxConstants.DmtxModuleVisited));
+                    Message.Array[row * mappingCols + col] &= (byte)(0xff ^ (DmtxConstants.DmtxModuleAssigned | DmtxConstants.DmtxModuleVisited));
                 }
             }
 
-            DmtxDecode.ModulePlacementEcc200(this._message.Array, encGreen.Message.Code, this._region.SizeIdx, DmtxConstants.DmtxModuleOnGreen);
+            DmtxDecode.ModulePlacementEcc200(Message.Array, encGreen.Message.Code, Region.SizeIdx, DmtxConstants.DmtxModuleOnGreen);
 
             /* Data Mosaic will traverse this array multiple times -- reset
                DmtxModuleAssigned and DMX_MODULE_VISITED bits before starting */
@@ -298,11 +285,11 @@ namespace DataMatrix.net
             {
                 for (col = 0; col < mappingCols; col++)
                 {
-                    this._message.Array[row * mappingCols + col] &= (byte)(0xff ^ (DmtxConstants.DmtxModuleAssigned | DmtxConstants.DmtxModuleVisited));
+                    Message.Array[row * mappingCols + col] &= (byte)(0xff ^ (DmtxConstants.DmtxModuleAssigned | DmtxConstants.DmtxModuleVisited));
                 }
             }
 
-            DmtxDecode.ModulePlacementEcc200(this._message.Array, encBlue.Message.Code, this._region.SizeIdx, DmtxConstants.DmtxModuleOnBlue);
+            DmtxDecode.ModulePlacementEcc200(Message.Array, encBlue.Message.Code, Region.SizeIdx, DmtxConstants.DmtxModuleOnBlue);
 
             PrintPattern(null, null);
 
@@ -311,14 +298,14 @@ namespace DataMatrix.net
 
         private void PrintPatternRaw()
         {
-            this._rawData = new bool[this._region.SymbolCols, this._region.SymbolRows];
+            RawData = new bool[Region.SymbolCols, Region.SymbolRows];
 
-            for (int symbolRow = 0; symbolRow < this._region.SymbolRows; symbolRow++)
+            for (int symbolRow = 0; symbolRow < Region.SymbolRows; symbolRow++)
             {
-                for (int symbolCol = 0; symbolCol < this._region.SymbolCols; symbolCol++)
+                for (int symbolCol = 0; symbolCol < Region.SymbolCols; symbolCol++)
                 {
-                    int moduleStatus = this._message.SymbolModuleStatus(this._region.SizeIdx, symbolRow, symbolCol);
-                    this._rawData[symbolCol, this._region.SymbolRows - symbolRow - 1] = ((moduleStatus & DmtxConstants.DmtxModuleOnBlue) != 0x00);
+                    int moduleStatus = Message.SymbolModuleStatus(Region.SizeIdx, symbolRow, symbolCol);
+                    RawData[symbolCol, Region.SymbolRows - symbolRow - 1] = ((moduleStatus & DmtxConstants.DmtxModuleOnBlue) != 0x00);
                 }
             }
         }
@@ -328,37 +315,37 @@ namespace DataMatrix.net
             int symbolRow;
             int[] rgb = new int[3];
 
-            double txy = this._marginSize;
+            double txy = MarginSize;
 
             DmtxMatrix3 m1 = DmtxMatrix3.Translate(txy, txy);
-            DmtxMatrix3 m2 = DmtxMatrix3.Scale(this._moduleSize, this._moduleSize);
+            DmtxMatrix3 m2 = DmtxMatrix3.Scale(ModuleSize, ModuleSize);
             DmtxMatrix3 rxfrm = m2 * m1;
 
-            int rowSize = this._image.RowSizeBytes;
-            int height = this._image.Height;
+            int rowSize = Image.RowSizeBytes;
+            int height = Image.Height;
 
             for (int pxlIndex = 0; pxlIndex < rowSize * height - 2; pxlIndex += 3)
             {
-                this._image.Pxl[pxlIndex] = backColor.HasValue ? backColor.Value.R : (byte)0xff;
-                this._image.Pxl[pxlIndex + 1] = backColor.HasValue ? backColor.Value.G : (byte)0xff;
-                this._image.Pxl[pxlIndex + 2] = backColor.HasValue ? backColor.Value.B : (byte)0xff;
+                Image.Pxl[pxlIndex] = backColor.HasValue ? backColor.Value.R : (byte)0xff;
+                Image.Pxl[pxlIndex + 1] = backColor.HasValue ? backColor.Value.G : (byte)0xff;
+                Image.Pxl[pxlIndex + 2] = backColor.HasValue ? backColor.Value.B : (byte)0xff;
             }
 
-            for (symbolRow = 0; symbolRow < this._region.SymbolRows; symbolRow++)
+            for (symbolRow = 0; symbolRow < Region.SymbolRows; symbolRow++)
             {
                 int symbolCol;
-                for (symbolCol = 0; symbolCol < this._region.SymbolCols; symbolCol++)
+                for (symbolCol = 0; symbolCol < Region.SymbolCols; symbolCol++)
                 {
                     DmtxVector2 vIn = new DmtxVector2(symbolCol, symbolRow);
                     DmtxVector2 vOut = vIn * rxfrm;
 
                     int pixelCol = (int)(vOut.X);
                     int pixelRow = (int)(vOut.Y);
-                    int moduleStatus = this._message.SymbolModuleStatus(this._region.SizeIdx, symbolRow, symbolCol);
+                    int moduleStatus = Message.SymbolModuleStatus(Region.SizeIdx, symbolRow, symbolCol);
 
-                    for (int i = pixelRow; i < pixelRow + this._moduleSize; i++)
+                    for (int i = pixelRow; i < pixelRow + ModuleSize; i++)
                     {
-                        for (int j = pixelCol; j < pixelCol + this._moduleSize; j++)
+                        for (int j = pixelCol; j < pixelCol + ModuleSize; j++)
                         {
                             if (foreColor.HasValue && backColor.HasValue)
                             {
@@ -373,9 +360,9 @@ namespace DataMatrix.net
                                 rgb[2] = ((moduleStatus & DmtxConstants.DmtxModuleOnRed) != 0x00) ? 0 : 255;
                             }
                             /*             dmtxImageSetRgb(enc->image, j, i, rgb); */
-                            this._image.SetPixelValue(j, i, 0, (byte)rgb[0]);
-                            this._image.SetPixelValue(j, i, 1, (byte)rgb[1]);
-                            this._image.SetPixelValue(j, i, 2, (byte)rgb[2]);
+                            Image.SetPixelValue(j, i, 0, (byte)rgb[0]);
+                            Image.SetPixelValue(j, i, 1, (byte)rgb[1]);
+                            Image.SetPixelValue(j, i, 2, (byte)rgb[2]);
                         }
                     }
                 }
@@ -413,7 +400,7 @@ namespace DataMatrix.net
 
             if (tmp < 0 || tmp > 255)
             {
-                throw new Exception("Error randomizing 253 state!");
+                throw new InvalidOperationException("Error randomizing 253 state!");
             }
 
             return (byte)tmp;
@@ -430,7 +417,7 @@ namespace DataMatrix.net
              */
 
             /* Encode input string into data codewords */
-            switch (this._scheme)
+            switch (Scheme)
             {
                 case DmtxScheme.DmtxSchemeAutoBest:
                     dataWordCount = EncodeAutoBest(buf, inputString);
@@ -439,7 +426,7 @@ namespace DataMatrix.net
                     dataWordCount = 0;
                     break;
                 default:
-                    dataWordCount = EncodeSingleScheme(buf, inputString, this._scheme);
+                    dataWordCount = EncodeSingleScheme(buf, inputString, Scheme);
                     break;
             }
 
@@ -609,7 +596,7 @@ namespace DataMatrix.net
                     continue;
 
                 bool err = EncodeNextWord(channel, targetScheme);
-                if (err == false)
+                if (!err)
                 {
                     /* XXX fix this */
                 }
@@ -648,7 +635,7 @@ namespace DataMatrix.net
 
             if (channel.EncScheme != targetScheme)
             {
-                throw new Exception("For encoding, channel scheme must equal target scheme!");
+                throw new InvalidOperationException("For encoding, channel scheme must equal target scheme!");
             }
 
             /* Encode next input value */
@@ -680,7 +667,7 @@ namespace DataMatrix.net
 
             if (channel.EncScheme != DmtxScheme.DmtxSchemeBase256)
             {
-                throw new Exception("Invalid encoding scheme selected!");
+                throw new InvalidOperationException("Invalid encoding scheme selected!");
             }
 
             int firstBytePtrIndex = channel.FirstCodeWord / 12;
@@ -715,7 +702,7 @@ namespace DataMatrix.net
             /* newDataLength does not include header bytes */
             if (newDataLength <= 0 || newDataLength > 1555)
             {
-                throw new Exception("Encoding failed, data length out of range!");
+                throw new InvalidOperationException("Encoding failed, data length out of range!");
             }
 
             /* One time shift of codewords when passing the 250 byte size threshold */
@@ -751,7 +738,7 @@ namespace DataMatrix.net
         {
             if (channel.EncScheme != DmtxScheme.DmtxSchemeEdifact)
             {
-                throw new Exception("Invalid encoding scheme selected!");
+                throw new InvalidOperationException("Invalid encoding scheme selected!");
             }
 
             byte inputValue = channel.Input[channel.InputIndex];
@@ -798,7 +785,7 @@ namespace DataMatrix.net
             /* Count remaining input values assuming EDIFACT encodation */
             if (channel.InputIndex > channel.Input.Length)
             {
-                throw new Exception("Input index out of range while encoding!");
+                throw new InvalidOperationException("Input index out of range while encoding!");
             }
 
             int edifactValues = channel.Input.Length - channel.InputIndex;
@@ -812,7 +799,7 @@ namespace DataMatrix.net
             /* XXX broken -- what if someone asks for DmtxSymbolRectAuto or specific sizeIdx? */
 
             int currentByte = channel.CurrentLength / 12;
-            DmtxSymbolSize sizeIdx = this.FindCorrectSymbolSize(currentByte, DmtxSymbolSize.DmtxSymbolSquareAuto);
+            DmtxSymbolSize sizeIdx = FindCorrectSymbolSize(currentByte, DmtxSymbolSize.DmtxSymbolSquareAuto);
             /* XXX test for sizeIdx == DmtxUndefined here */
             int symbolCodewords = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribSymbolDataWords, sizeIdx) - currentByte;
 
@@ -832,13 +819,13 @@ namespace DataMatrix.net
                     for (int i = 0; i < edifactValues; i++)
                     {
                         bool err = EncodeNextWord(channel, DmtxScheme.DmtxSchemeAscii);
-                        if (err == false)
+                        if (!err)
                         {
                             return;
                         }
                         if (channel.Invalid != DmtxChannelStatus.DmtxChannelValid)
                         {
-                            throw new Exception("Error checking for end of symbol edifact");
+                            throw new InvalidOperationException("Error checking for end of symbol edifact");
                         }
                     }
                 }
@@ -858,7 +845,7 @@ namespace DataMatrix.net
             /* XXX should this assertion actually be a legit runtime test? */
             if ((channel.EncodedLength / 12 > 3 * 1558))
             {
-                throw new Exception("Can't push input word, encoded length exceeds limits!");
+                throw new InvalidOperationException("Can't push input word, encoded length exceeds limits!");
             }/* increased for Mosaic */
 
             /* XXX this is currently pretty ugly, but can wait until the
@@ -950,12 +937,12 @@ namespace DataMatrix.net
                 channel.EncScheme != DmtxScheme.DmtxSchemeText &&
                 channel.EncScheme != DmtxScheme.DmtxSchemeC40)
             {
-                throw new Exception("Invalid encoding scheme selected!");
+                throw new InvalidOperationException("Invalid encoding scheme selected!");
             }
 
             if (channel.CurrentLength > channel.EncodedLength)
             {
-                throw new Exception("Encoding length out of range!");
+                throw new InvalidOperationException("Encoding length out of range!");
             }
 
             /* If there are no pre-encoded codewords then generate some */
@@ -964,7 +951,7 @@ namespace DataMatrix.net
 
                 if (channel.CurrentLength % 12 != 0)
                 {
-                    throw new Exception("Invalid encoding length!");
+                    throw new InvalidOperationException("Invalid encoding length!");
                 }
 
                 /* Ideally we would only encode one codeword triplet here (the
@@ -1041,13 +1028,13 @@ namespace DataMatrix.net
 
                         if (channel.Input.Length < channel.InputIndex)
                         {
-                            throw new Exception("Channel input index exceeds range!");
+                            throw new InvalidOperationException("Channel input index exceeds range!");
                         }
 
                         int inputCount = channel.Input.Length - channel.InputIndex;
 
                         bool err = ProcessEndOfSymbolTriplet(channel, triplet, tripletCount, inputCount);
-                        if (err == false)
+                        if (!err)
                             return false;
                         break;
                     }
@@ -1077,7 +1064,7 @@ namespace DataMatrix.net
                 encScheme != DmtxScheme.DmtxSchemeText &&
                 encScheme != DmtxScheme.DmtxSchemeC40)
             {
-                throw new Exception("Invalid encoding scheme selected!");
+                throw new InvalidOperationException("Invalid encoding scheme selected!");
             }
 
             int count = 0;
@@ -1204,7 +1191,7 @@ namespace DataMatrix.net
             /* We should always reach this point on a byte boundary */
             if (channel.CurrentLength % 12 != 0)
             {
-                throw new Exception("Invalid current length for encoding!");
+                throw new InvalidOperationException("Invalid current length for encoding!");
             }
 
             /* XXX Capture how many extra input values will be counted ... for later adjustment */
@@ -1213,7 +1200,7 @@ namespace DataMatrix.net
             /* Find minimum symbol size big enough to accomodate remaining codewords */
             int currentByte = channel.CurrentLength / 12;
 
-            DmtxSymbolSize sizeIdx = this.FindCorrectSymbolSize(currentByte + ((inputCount == 3) ? 2 : inputCount), this._sizeIdxRequest);
+            DmtxSymbolSize sizeIdx = FindCorrectSymbolSize(currentByte + ((inputCount == 3) ? 2 : inputCount), SizeIdxRequest);
 
             if (sizeIdx == DmtxSymbolSize.DmtxSymbolShapeAuto)
                 return false;
@@ -1231,11 +1218,11 @@ namespace DataMatrix.net
             {
                 ChangeEncScheme(channel, DmtxScheme.DmtxSchemeAscii, DmtxUnlatch.Implicit);
                 err = EncodeNextWord(channel, DmtxScheme.DmtxSchemeAscii);
-                if (err == false)
+                if (!err)
                     return false;
                 if (channel.Invalid != DmtxChannelStatus.DmtxChannelValid || channel.InputIndex != channel.Input.Length)
                 {
-                    throw new Exception("Error processing end of symbol triplet!");
+                    throw new InvalidOperationException("Error processing end of symbol triplet!");
                 }
             }
             else if (remainingCodewords == 2)
@@ -1265,11 +1252,11 @@ namespace DataMatrix.net
                 {
                     ChangeEncScheme(channel, DmtxScheme.DmtxSchemeAscii, DmtxUnlatch.Explicit);
                     err = EncodeNextWord(channel, DmtxScheme.DmtxSchemeAscii);
-                    if (err == false)
+                    if (!err)
                         return false;
                     if (channel.Invalid != DmtxChannelStatus.DmtxChannelValid)
                     {
-                        throw new Exception("Error processing end of symbol triplet!");
+                        throw new InvalidOperationException("Error processing end of symbol triplet!");
                     }
                     /* XXX I can still think of a case that looks ugly here.  What if
                        the final 2 C40 codewords are a Shift word and a non-Shift
@@ -1291,12 +1278,12 @@ namespace DataMatrix.net
                     while (channel.InputIndex < channel.Input.Length)
                     {
                         err = EncodeNextWord(channel, DmtxScheme.DmtxSchemeAscii);
-                        if (err == false)
+                        if (!err)
                             return false;
 
                         if (channel.Invalid != DmtxChannelStatus.DmtxChannelValid)
                         {
-                            throw new Exception("Error processing end of symbol triplet!");
+                            throw new InvalidOperationException("Error processing end of symbol triplet!");
                         }
                     }
                 }
@@ -1304,7 +1291,7 @@ namespace DataMatrix.net
 
             if (channel.InputIndex != channel.Input.Length)
             {
-                throw new Exception("Could not fully process end of symbol triplet!");
+                throw new InvalidOperationException("Could not fully process end of symbol triplet!");
             }
 
             return true;
@@ -1321,7 +1308,7 @@ namespace DataMatrix.net
         {
             if (channel.EncScheme != DmtxScheme.DmtxSchemeAscii)
             {
-                throw new Exception("Invalid encoding scheme selected!");
+                throw new InvalidOperationException("Invalid encoding scheme selected!");
             }
 
             byte inputValue = channel.Input[channel.InputIndex];
@@ -1407,7 +1394,7 @@ namespace DataMatrix.net
         {
             if (channel.EncScheme == targetScheme)
             {
-                throw new Exception("Target scheme already equals channel scheme, cannot be changed!");
+                throw new InvalidOperationException("Target scheme already equals channel scheme, cannot be changed!");
             }
 
             /* Unlatch to ASCII (base encodation scheme) */
@@ -1417,7 +1404,7 @@ namespace DataMatrix.net
                     /* Nothing to do */
                     if (channel.CurrentLength % 12 != 0)
                     {
-                        throw new Exception("Invalid current length detected encoding ascii code");
+                        throw new InvalidOperationException("Invalid current length detected encoding ascii code");
                     }
                     break;
 
@@ -1457,7 +1444,7 @@ namespace DataMatrix.net
                        increment current and encoded length */
                     if (channel.CurrentLength % 3 != 0)
                     {
-                        throw new Exception("Error changing encryption scheme, current length is invalid!");
+                        throw new InvalidOperationException("Error changing encryption scheme, current length is invalid!");
                     }
 
                     if (unlatchType == DmtxUnlatch.Explicit)
@@ -1523,7 +1510,7 @@ namespace DataMatrix.net
             channel.FirstCodeWord = channel.CurrentLength - 12;
             if (channel.FirstCodeWord % 12 != 0)
             {
-                throw new Exception("Error while changin encoding scheme, invalid first code word!");
+                throw new InvalidOperationException("Error while changin encoding scheme, invalid first code word!");
             }
         }
 
@@ -1603,77 +1590,29 @@ namespace DataMatrix.net
         #endregion
 
         #region Properties
-        internal int Method
-        {
-            get { return _method; }
-            set { _method = value; }
-        }
+        internal int Method { get; private set; }
 
-        internal DmtxScheme Scheme
-        {
-            get { return _scheme; }
-            set { _scheme = value; }
-        }
+        internal DmtxScheme Scheme { get; set; }
 
-        internal DmtxSymbolSize SizeIdxRequest
-        {
-            get { return _sizeIdxRequest; }
-            set { _sizeIdxRequest = value; }
-        }
+        internal DmtxSymbolSize SizeIdxRequest { get; set; }
 
-        internal int MarginSize
-        {
-            get { return _marginSize; }
-            set { _marginSize = value; }
-        }
+        internal int MarginSize { get; set; }
 
-        internal int ModuleSize
-        {
-            get { return _moduleSize; }
-            set { _moduleSize = value; }
-        }
+        internal int ModuleSize { get; set; }
 
-        internal DmtxPackOrder PixelPacking
-        {
-            get { return _pixelPacking; }
-            set { _pixelPacking = value; }
-        }
+        internal DmtxPackOrder PixelPacking { get; private set; }
 
-        internal DmtxFlip ImageFlip
-        {
-            get { return _imageFlip; }
-            set { _imageFlip = value; }
-        }
+        internal DmtxFlip ImageFlip { get; private set; }
 
-        internal int RowPadBytes
-        {
-            get { return _rowPadBytes; }
-            set { _rowPadBytes = value; }
-        }
+        internal int RowPadBytes { get; private set; }
 
-        internal DmtxMessage Message
-        {
-            get { return _message; }
-            set { _message = value; }
-        }
+        internal DmtxMessage Message { get; private set; }
 
-        internal DmtxImage Image
-        {
-            get { return _image; }
-            set { _image = value; }
-        }
+        internal DmtxImage Image { get; private set; }
 
-        internal DmtxRegion Region
-        {
-            get { return _region; }
-            set { _region = value; }
-        }
+        internal DmtxRegion Region { get; private set; }
 
-        public bool[,] RawData
-        {
-            get { return _rawData; }
-            set { _rawData = value; }
-        }
+        public bool[,] RawData {  get; private set; }
         #endregion
     }
 }

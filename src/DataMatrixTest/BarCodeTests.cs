@@ -30,10 +30,10 @@ Contact: Michael Faschinger - michfasch@gmx.at
 
 using DataMatrix.net;
 using NUnit.Framework;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 
 namespace DataMatrixTest
@@ -47,20 +47,18 @@ namespace DataMatrixTest
         public void TestMatrixEnDecoder()
         {
             string fileName = "encodedImg.png";
-            DmtxImageEncoder encoder = new DmtxImageEncoder();
-            DmtxImageEncoderOptions options = new DmtxImageEncoderOptions();
-            options.ModuleSize = 8;
-            options.MarginSize = 4;
-            options.BackColor = Color.White;
-            options.ForeColor = Color.Green;
-            Bitmap encodedBitmap = encoder.EncodeImage(testVal);
-            encodedBitmap.Save(fileName, ImageFormat.Png);
-
-            DmtxImageDecoder decoder = new DmtxImageDecoder();
-            List<string> codes = decoder.DecodeImage((Bitmap)Bitmap.FromFile(fileName), 1, new TimeSpan(0, 0, 3));
-            foreach (string code in codes)
+            DmtxImageEncoder encoder = new();
+            DmtxImageEncoderOptions options = new()
             {
-                Console.WriteLine("Decoded:\n" + code);
+                ModuleSize = 8,
+                MarginSize = 4,
+                BackColor = Color.White,
+                ForeColor = Color.Green
+            };
+            SKBitmap encodedBitmap = encoder.EncodeImage(testVal, options);
+            using (FileStream fs = new(fileName, FileMode.Create))
+            {
+                encodedBitmap.Encode(fs, SKEncodedImageFormat.Png, 100);
             }
 
             string s = encoder.EncodeSvgImage("DataMatrix.net rocks!!one!eleven!!111!eins!!!!", 7, 7, Color.FromArgb(100, 255, 0, 0), Color.Turquoise);
@@ -70,21 +68,82 @@ namespace DataMatrixTest
             tw.Close();
 
             TestRawEncoder("HELLO WORLD");
-            new DmtxImageEncoder().EncodeImage("HELLO WORLD").Save("helloWorld.png");
+            using (FileStream fs = new("helloWorld.png", FileMode.Create))
+            {
+                new DmtxImageEncoder().EncodeImage("HELLO WORLD").Encode(fs, SKEncodedImageFormat.Png, 100);
+            }
 
-            for(int i = 1; i < 10; i++)
+            DmtxImageDecoder decoder = new();
+            List<string> codes = decoder.DecodeImage(SKBitmap.Decode(fileName), 1, new TimeSpan(0, 0, 3));
+            foreach (string code in codes)
+            {
+                Console.WriteLine("Decoded:\n" + code);
+            }
+
+            for (int i = 1; i < 10; i++)
             {
                 var encodedData = Guid.NewGuid().ToString();
-                Bitmap source = encoder.EncodeImage(encodedData);
+                SKBitmap source = encoder.EncodeImage(encodedData);
                 var decodedData = decoder.DecodeImage(source);
-                if(decodedData.Count != 1 || decodedData[0] != encodedData)
-                    throw new Exception("Encoding or decoding failed!");
+                if (decodedData.Count != 1 || decodedData[0] != encodedData)
+                    throw new InvalidOperationException("Encoding or decoding failed!");
             }
+        }
+
+        [Test]
+        public void TestMosaicEnDecoder()
+        {
+            string fileName = "encodedMosaicImg.png";
+            DmtxImageEncoder encoder = new();
+            DmtxImageEncoderOptions options = new()
+            {
+                ModuleSize = 8,
+                MarginSize = 4
+            };
+            SKBitmap encodedBitmap = encoder.EncodeImageMosaic(testVal, options);
+            using (FileStream fs = new(fileName, FileMode.Create))
+            {
+                encodedBitmap.Encode(fs, SKEncodedImageFormat.Png, 100);
+            }
+
+            DmtxImageDecoder decoder = new();
+            List<string> codes = decoder.DecodeImageMosaic(SKBitmap.Decode(fileName), 1, new TimeSpan(0, 0, 3));
+            Assert.That(codes.Count, Is.GreaterThan(0));
+            foreach (string code in codes)
+            {
+                Console.WriteLine("Decoded:\n" + code);
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(DataMatrixTestClass), nameof(DataMatrixTestClass.TestGS1Cases))]
+        public void TestGS1EnDecoder(string fileName, string gs1Code, SKEncodedImageFormat encodedFormat)
+        {
+            DmtxImageEncoder encoder = new();
+            DmtxImageEncoderOptions options = new()
+            {
+                ModuleSize = 8,
+                MarginSize = 30,
+                BackColor = Color.White,
+                ForeColor = Color.Black,
+                Scheme = DmtxScheme.DmtxSchemeAsciiGS1
+            };
+            SKBitmap encodedBitmap = encoder.EncodeImage(gs1Code, options);
+            using (FileStream fs = new(fileName, FileMode.Create))
+            {
+                encodedBitmap.Encode(fs, encodedFormat, 100);
+            }
+            DmtxImageDecoder decoder = new();
+            List<string> decodedCodes = decoder.DecodeImage(encodedBitmap, 1, new TimeSpan(0, 0, 5));
+            Assert.That(decodedCodes, Is.Not.Null);
+            Assert.That(decodedCodes.Count, Is.GreaterThan(0));
+            Assert.That(decodedCodes[0], Is.EqualTo(gs1Code));
+            Console.WriteLine("Encoded code 1: {0}, decoded code 1: {1}, codes are equal: {2}", gs1Code, decodedCodes[0], gs1Code.Equals(decodedCodes[0]));
         }
 
         private void TestRawEncoder(string text)
         {
-            DmtxImageEncoder encoder = new DmtxImageEncoder();
+            DmtxImageEncoder encoder = new();
             bool[,] rawData = encoder.EncodeRawData(text);
             Console.WriteLine("================");
             Console.WriteLine();
@@ -100,55 +159,5 @@ namespace DataMatrixTest
             Console.WriteLine("================");
         }
 
-
-        [Test]
-        public void TestMosaicEnDecoder()
-        {
-            string fileName = "encodedMosaicImg.png";
-            DmtxImageEncoder encoder = new DmtxImageEncoder();
-            DmtxImageEncoderOptions options = new DmtxImageEncoderOptions();
-            options.ModuleSize = 8;
-            options.MarginSize = 4;
-            Bitmap encodedBitmap = encoder.EncodeImageMosaic(testVal);
-            encodedBitmap.Save(fileName, ImageFormat.Png);
-
-            DmtxImageDecoder decoder = new DmtxImageDecoder();
-            List<string> codes = decoder.DecodeImageMosaic((Bitmap)Bitmap.FromFile(fileName), 1, new TimeSpan(0, 0, 3));
-            foreach (string code in codes)
-            {
-                Console.WriteLine("Decoded:\n" + code);
-            }
-        }
-
-        [Test]
-        public void TestGS1EnDecoder()
-        {
-            string fileName1 = "gs1DataMatrix1.png";
-            string fileName2 = "gs1DataMatrix2.gif";
-            string gs1Code1 = "10AC3454G3";
-            string gs1Code2 = "010761234567890017100503";
-            DmtxImageEncoder encoder = new DmtxImageEncoder();
-            DmtxImageEncoderOptions options = new DmtxImageEncoderOptions();
-            options.ModuleSize = 8;
-            options.MarginSize = 30;
-            options.BackColor = Color.White;
-            options.ForeColor = Color.Black;
-            options.Scheme = DmtxScheme.DmtxSchemeAsciiGS1;
-            Bitmap encodedBitmap1 = encoder.EncodeImage(gs1Code1, options);
-            encodedBitmap1.Save(fileName1, ImageFormat.Png);
-            Bitmap encodedBitmap2 = encoder.EncodeImage(gs1Code2, options);
-            encodedBitmap2.Save(fileName2, ImageFormat.Gif);
-            DmtxImageDecoder decoder = new DmtxImageDecoder();
-            List<string> decodedCodes1 = decoder.DecodeImage(encodedBitmap1, 1, new TimeSpan(0, 0, 5));
-            List<string> decodedCodes2 = decoder.DecodeImage(encodedBitmap2, 1, new TimeSpan(0, 0, 5));
-            if (decodedCodes1 != null && decodedCodes1.Count == 1)
-            {
-                Console.WriteLine("Encoded code 1: {0}, decoded code 1: {1}, codes are equal: {2}", gs1Code1, decodedCodes1[0], gs1Code1.Equals(decodedCodes1[0]));
-            }
-            if (decodedCodes2 != null && decodedCodes2.Count == 1)
-            {
-                Console.WriteLine("Encoded code 2: {0}, decoded code 2: {1}, codes are equal: {2}", gs1Code2, decodedCodes2[0], gs1Code2.Equals(decodedCodes2[0]));
-            }
-        }
     }
 }

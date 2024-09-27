@@ -36,23 +36,22 @@ namespace DataMatrix.net
     internal class DmtxDecode
     {
         #region Fields
-        int _edgeMin;
-        int _edgeMax;
-        int _scanGap;
-        double _squareDevn;
-        DmtxSymbolSize _sizeIdxExpected;
-        int _edgeThresh;
+        private int _edgeMin;
+        private int _edgeMax;
+        private int _scanGap;
+        private double _squareDevn;
+        private DmtxSymbolSize _sizeIdxExpected;
+        private int _edgeThresh;
 
         /* Image modifiers */
-        int _xMin;
-        int _yMin;
-        int _xMax;
-        int _yMax;
-        int _scale;
+        private int _xMin;
+        private int _yMin;
+        private int _xMax;
+        private int _yMax;
+        private int _scale;
         /* Internals */
-        byte[] _cache;
-        DmtxImage _image;
-        DmtxScanGrid _grid;
+        private byte[] _cache;
+        private DmtxImage _image;
         #endregion
 
         #region Constructors
@@ -62,22 +61,22 @@ namespace DataMatrix.net
             int width = img.Width / scale;
             int height = img.Height / scale;
 
-            this._edgeMin = DmtxConstants.DmtxUndefined;
-            this._edgeMax = DmtxConstants.DmtxUndefined;
-            this._scanGap = 1;
-            this._squareDevn = Math.Cos(50.0 * (Math.PI / 180.0));
-            this._sizeIdxExpected = DmtxSymbolSize.DmtxSymbolShapeAuto;
-            this._edgeThresh = 10;
+            _edgeMin = DmtxConstants.DmtxUndefined;
+            _edgeMax = DmtxConstants.DmtxUndefined;
+            _scanGap = 1;
+            _squareDevn = Math.Cos(50.0 * (Math.PI / 180.0));
+            _sizeIdxExpected = DmtxSymbolSize.DmtxSymbolShapeAuto;
+            _edgeThresh = 10;
 
-            this._xMin = 0;
-            this._xMax = width - 1;
-            this._yMin = 0;
-            this._yMax = height - 1;
-            this._scale = scale;
+            _xMin = 0;
+            _xMax = width - 1;
+            _yMin = 0;
+            _yMax = height - 1;
+            _scale = scale;
 
-            this._cache = new byte[width * height];
+            _cache = new byte[width * height];
 
-            this._image = img;
+            _image = img;
             ValidateSettingsAndInitScanGrid();
         }
         #endregion
@@ -85,23 +84,23 @@ namespace DataMatrix.net
         #region Methods
         private void ValidateSettingsAndInitScanGrid()
         {
-            if (this._squareDevn <= 0.0 || this._squareDevn >= 1.0)
+            if (_squareDevn <= 0.0 || _squareDevn >= 1.0)
             {
                 throw new ArgumentException("Invalid decode settings!");
             }
 
-            if (this._scanGap < 1)
+            if (_scanGap < 1)
             {
                 throw new ArgumentException("Invalid decode settings!");
             }
 
-            if (this._edgeThresh < 1 || this._edgeThresh > 100)
+            if (_edgeThresh < 1 || _edgeThresh > 100)
             {
                 throw new ArgumentException("Invalid decode settings!");
             }
 
             /* Reinitialize scangrid in case any inputs changed */
-            this._grid = new DmtxScanGrid(this);
+            Grid = new DmtxScanGrid(this);
         }
 
         internal int GetCacheIndex(int x, int y)
@@ -116,10 +115,10 @@ namespace DataMatrix.net
 
         bool GetPixelValue(int x, int y, int channel, ref int value)
         {
-            int xUnscaled = x * this._scale;
-            int yUnscaled = y * this._scale;
+            int xUnscaled = x * _scale;
+            int yUnscaled = y * _scale;
 
-            return this._image.GetPixelValue(xUnscaled, yUnscaled, channel, ref value);
+            return _image.GetPixelValue(xUnscaled, yUnscaled, channel, ref value);
 
         }
 
@@ -135,7 +134,7 @@ namespace DataMatrix.net
             lines[2] = new DmtxBresLine(p2, p3, pEmpty);
             lines[3] = new DmtxBresLine(p3, p0, pEmpty);
 
-            int minY = this._yMax;
+            int minY = _yMax;
             int maxY = 0;
 
             minY = DmtxCommon.Min(minY, p0.Y);
@@ -154,7 +153,7 @@ namespace DataMatrix.net
 
             for (i = 0; i < sizeY; i++)
             {
-                scanlineMin[i] = this._xMax;
+                scanlineMin[i] = _xMax;
             }
 
             for (i = 0; i < 4; i++)
@@ -168,11 +167,11 @@ namespace DataMatrix.net
                 }
             }
 
-            for (posY = minY; posY < maxY && posY < this._yMax; posY++)
+            for (posY = minY; posY < maxY && posY < _yMax; posY++)
             {
                 idx = posY - minY;
                 int posX;
-                for (posX = scanlineMin[idx]; posX < scanlineMax[idx] && posX < this._xMax; posX++)
+                for (posX = scanlineMin[idx]; posX < scanlineMax[idx] && posX < _xMax; posX++)
                 {
                     if (posX < 0 || posY < 0)
                     {
@@ -181,7 +180,7 @@ namespace DataMatrix.net
                     try
                     {
                         int cacheIndex = GetCacheIndex(posX, posY);
-                        this._cache[cacheIndex] |= 0x80;
+                        _cache[cacheIndex] |= 0x80;
                     }
                     catch
                     {
@@ -252,7 +251,7 @@ namespace DataMatrix.net
 
             if (!PopulateArrayFromMatrix(reg, result))
             {
-                throw new Exception("Populating Array from matrix failed!");
+                throw new InvalidOperationException("Populating Array from matrix failed!");
             }
 
             /* maybe place remaining logic into new dmtxDecodePopulatedArray()
@@ -261,7 +260,7 @@ namespace DataMatrix.net
             ModulePlacementEcc200(result.Array, result.Code,
                   reg.SizeIdx, DmtxConstants.DmtxModuleOnRed | DmtxConstants.DmtxModuleOnGreen | DmtxConstants.DmtxModuleOnBlue);
 
-            if (DmtxCommon.DecodeCheckErrors(result.Code, 0, reg.SizeIdx, fix) != true)
+            if (!DmtxCommon.DecodeCheckErrors(result.Code, 0, reg.SizeIdx, fix))
             {
                 return null;
             }
@@ -396,7 +395,7 @@ namespace DataMatrix.net
 
             if (jumpThreshold < 0)
             {
-                throw new Exception("Negative jump threshold is not allowed in tally module jumps");
+                throw new InvalidOperationException("Negative jump threshold is not allowed in tally module jumps");
             }
 
 
@@ -407,8 +406,8 @@ namespace DataMatrix.net
                    decide status based on predictable barcode border pattern */
 
                 int travel = travelStart;
-                int color = horizontal ? this.ReadModuleColor(reg, line, travel, reg.SizeIdx, reg.FlowBegin.Plane) 
-                                : this.ReadModuleColor(reg, travel, line, reg.SizeIdx, reg.FlowBegin.Plane);
+                int color = horizontal ? ReadModuleColor(reg, line, travel, reg.SizeIdx, reg.FlowBegin.Plane)
+                                : ReadModuleColor(reg, travel, line, reg.SizeIdx, reg.FlowBegin.Plane);
                 int tModule = (darkOnLight) ? reg.OffColor - color : color - reg.OffColor;
 
                 int statusModule = (travelStep == 1 || (line & 0x01) == 0) ? DmtxConstants.DmtxModuleOnRGB : DmtxConstants.DmtxModuleOff;
@@ -424,8 +423,8 @@ namespace DataMatrix.net
                     /* For normal data-bearing modules capture color and decide
                        module status based on comparison to previous "known" module */
 
-                    color = horizontal ? this.ReadModuleColor(reg, line, travel, reg.SizeIdx, reg.FlowBegin.Plane) 
-                        : this.ReadModuleColor(reg, travel, line, reg.SizeIdx, reg.FlowBegin.Plane);
+                    color = horizontal ? ReadModuleColor(reg, line, travel, reg.SizeIdx, reg.FlowBegin.Plane)
+                        : ReadModuleColor(reg, travel, line, reg.SizeIdx, reg.FlowBegin.Plane);
                     tModule = (darkOnLight) ? reg.OffColor - color : color - reg.OffColor;
 
                     if (statusPrev == DmtxConstants.DmtxModuleOnRGB)
@@ -450,7 +449,7 @@ namespace DataMatrix.net
                     }
                     if (!(mapRow < 24 && mapCol < 24))
                     {
-                        throw new Exception("Tally module mump failed, index out of range!");
+                        throw new InvalidOperationException("Tally module mump failed, index out of range!");
                     }
 
                     if (statusModule == DmtxConstants.DmtxModuleOnRGB)
@@ -463,7 +462,7 @@ namespace DataMatrix.net
 
                 if (weight != 0)
                 {
-                    throw new Exception("Tally module jump failed, weight <> 0!");
+                    throw new InvalidOperationException("Tally module jump failed, weight <> 0!");
                 }
             }
         }
@@ -499,7 +498,7 @@ namespace DataMatrix.net
         {
             if ((moduleOnColor & (DmtxConstants.DmtxModuleOnRed | DmtxConstants.DmtxModuleOnGreen | DmtxConstants.DmtxModuleOnBlue)) == 0)
             {
-                throw new Exception("Error with module placement ECC 200");
+                throw new InvalidOperationException("Error with module placement ECC 200");
             }
 
             int mappingRows = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixRows, sizeIdx);
@@ -654,12 +653,12 @@ namespace DataMatrix.net
 
         internal DmtxRegion RegionFindNext(TimeSpan timeout)
         {
-            DmtxPixelLoc loc = new DmtxPixelLoc();
+            DmtxPixelLoc loc = new();
             DateTime startTime = DateTime.Now;
             /* Continue until we find a region or run out of chances */
-            for (; ; )
+            while (true)
             {
-                DmtxRange locStatus = this._grid.PopGridLocation(ref loc);
+                DmtxRange locStatus = Grid.PopGridLocation(ref loc);
                 if (locStatus == DmtxRange.DmtxRangeEnd)
                     break;
 
@@ -680,44 +679,43 @@ namespace DataMatrix.net
 
         DmtxRegion RegionScanPixel(int x, int y)
         {
-            DmtxRegion reg = new DmtxRegion();
-            DmtxPixelLoc loc = new DmtxPixelLoc {X = x, Y = y};
+            DmtxRegion reg = new();
+            DmtxPixelLoc loc = new() { X = x, Y = y };
 
-
-            int cacheIndex = this.DecodeGetCache(loc.X, loc.Y);
+            int cacheIndex = DecodeGetCache(loc.X, loc.Y);
             if (cacheIndex == -1)
                 return null;
 
-            if (this._cache[cacheIndex] != 0x00)
+            if ((_cache[cacheIndex] & 0x80) != 0x00)
                 return null;
 
             /* Test for presence of any reasonable edge at this location */
-            DmtxPointFlow flowBegin = this.MatrixRegionSeekEdge(loc);
-            if (flowBegin.Mag < (int)(this._edgeThresh * 7.65 + 0.5))
+            DmtxPointFlow flowBegin = MatrixRegionSeekEdge(loc);
+            if (flowBegin.Mag < (int)(_edgeThresh * 7.65 + 0.5))
                 return null;
 
             /* Determine barcode orientation */
-            if (MatrixRegionOrientation(reg, flowBegin) == false)
+            if (!MatrixRegionOrientation(reg, flowBegin))
                 return null;
-            if (RegionUpdateXfrms(reg) == false)
+            if (!RegionUpdateXfrms(reg))
                 return null;
 
             /* Define top edge */
-            if (MatrixRegionAlignCalibEdge(reg, DmtxEdge.DmtxEdgeTop) == false)
+            if (!MatrixRegionAlignCalibEdge(reg, DmtxEdge.DmtxEdgeTop))
                 return null;
-            if (RegionUpdateXfrms(reg) == false)
+            if (!RegionUpdateXfrms(reg))
                 return null;
 
             /* Define right edge */
-            if (MatrixRegionAlignCalibEdge(reg, DmtxEdge.DmtxEdgeRight) == false)
+            if (!MatrixRegionAlignCalibEdge(reg, DmtxEdge.DmtxEdgeRight))
                 return null;
-            if (RegionUpdateXfrms(reg) == false)
+            if (!RegionUpdateXfrms(reg))
                 return null;
 
             //CALLBACK_MATRIX(&reg);
 
             /* Calculate the best fitting symbol size */
-            if (MatrixRegionFindSize(reg) == false)
+            if (!MatrixRegionFindSize(reg))
                 return null;
 
             /* Found a valid matrix region */
@@ -726,19 +724,15 @@ namespace DataMatrix.net
 
         int DecodeGetCache(int x, int y)
         {
-            int width = this.Width;
-            int height = this.Height;
-
-            if (x < 0 || x >= width || y < 0 || y >= height)
+            if (x < 0 || x >= Width || y < 0 || y >= Height)
                 return DmtxConstants.DmtxUndefined;
-            return y * width + x;
+            return y * Width + x;
         }
 
         DmtxPointFlow MatrixRegionSeekEdge(DmtxPixelLoc loc)
         {
-            DmtxPointFlow[] flowPlane = new DmtxPointFlow[3];
-
             int channelCount = _image.ChannelCount;
+            DmtxPointFlow[] flowPlane = new DmtxPointFlow[channelCount];
 
             /* Find whether red, green, or blue shows the strongest edge */
             int strongIdx = 0;
@@ -754,8 +748,8 @@ namespace DataMatrix.net
 
             DmtxPointFlow flow = flowPlane[strongIdx];
 
-            DmtxPointFlow flowPos = this.FindStrongestNeighbor(flow, +1);
-            DmtxPointFlow flowNeg = this.FindStrongestNeighbor(flow, -1);
+            DmtxPointFlow flowPos = FindStrongestNeighbor(flow, +1);
+            DmtxPointFlow flowNeg = FindStrongestNeighbor(flow, -1);
             if (flowPos.Mag != 0 && flowNeg.Mag != 0)
             {
                 DmtxPointFlow flowPosBack = FindStrongestNeighbor(flowPos, -1);
@@ -792,10 +786,13 @@ namespace DataMatrix.net
                     continue;
                 }
 
-                if ((this._cache[cacheIndex] & 0x80) != 0x00)
+                if ((_cache[cacheIndex] & 0x80) != 0x00)
                 {
                     if (++occupied > 2)
+                    {
                         return DmtxConstants.DmtxBlankEdge;
+                    }
+
                     continue;
                 }
 
@@ -819,19 +816,19 @@ namespace DataMatrix.net
 
         DmtxPointFlow GetPointFlow(int colorPlane, DmtxPixelLoc loc, int arrive)
         {
-            int[] coefficient = new[] { 0, 1, 2, 1, 0, -1, -2, -1 };
+            int[] coefficient = [0, 1, 2, 1, 0, -1, -2, -1];
             int patternIdx;
             int compass;
             int[] mag = new int[4];
             int[] colorPattern = new int[8];
-            DmtxPointFlow flow = new DmtxPointFlow();
+            DmtxPointFlow flow = new();
 
             for (patternIdx = 0; patternIdx < 8; patternIdx++)
             {
                 int xAdjust = loc.X + DmtxConstants.DmtxPatternX[patternIdx];
                 int yAdjust = loc.Y + DmtxConstants.DmtxPatternY[patternIdx];
                 bool err = GetPixelValue(xAdjust, yAdjust, colorPlane, ref colorPattern[patternIdx]);
-                if (err == false)
+                if (!err)
                 {
                     return DmtxConstants.DmtxBlankEdge;
                 }
@@ -894,25 +891,25 @@ namespace DataMatrix.net
             int bestContrast = 0;
             int bestColorOnAvg = bestColorOffAvg = 0;
 
-            if (this._sizeIdxExpected == DmtxSymbolSize.DmtxSymbolShapeAuto)
+            if (_sizeIdxExpected == DmtxSymbolSize.DmtxSymbolShapeAuto)
             {
                 sizeIdxBeg = 0;
                 sizeIdxEnd = (DmtxSymbolSize)(DmtxConstants.DmtxSymbolSquareCount + DmtxConstants.DmtxSymbolRectCount);
             }
-            else if (this._sizeIdxExpected == DmtxSymbolSize.DmtxSymbolSquareAuto)
+            else if (_sizeIdxExpected == DmtxSymbolSize.DmtxSymbolSquareAuto)
             {
                 sizeIdxBeg = 0;
                 sizeIdxEnd = (DmtxSymbolSize)DmtxConstants.DmtxSymbolSquareCount;
             }
-            else if (this._sizeIdxExpected == DmtxSymbolSize.DmtxSymbolRectAuto)
+            else if (_sizeIdxExpected == DmtxSymbolSize.DmtxSymbolRectAuto)
             {
                 sizeIdxBeg = (DmtxSymbolSize)DmtxConstants.DmtxSymbolSquareCount;
                 sizeIdxEnd = (DmtxSymbolSize)(DmtxConstants.DmtxSymbolSquareCount + DmtxConstants.DmtxSymbolRectCount);
             }
             else
             {
-                sizeIdxBeg = this._sizeIdxExpected;
-                sizeIdxEnd = this._sizeIdxExpected + 1;
+                sizeIdxBeg = _sizeIdxExpected;
+                sizeIdxEnd = _sizeIdxExpected + 1;
             }
 
             /* Test each barcode size to find best contrast in calibration modules */
@@ -978,7 +975,7 @@ namespace DataMatrix.net
             reg.MappingCols = DmtxCommon.GetSymbolAttribute(DmtxSymAttribute.DmtxSymAttribMappingMatrixCols, reg.SizeIdx);
 
             /* Tally jumps on horizontal calibration bar to verify sizeIdx */
-            int jumpCount = this.CountJumpTally(reg, 0, reg.SymbolRows - 1, DmtxDirection.DmtxDirRight);
+            int jumpCount = CountJumpTally(reg, 0, reg.SymbolRows - 1, DmtxDirection.DmtxDirRight);
             int errors = Math.Abs(1 + jumpCount - reg.SymbolCols);
             if (jumpCount < 0 || errors > 2)
                 return false;
@@ -1028,7 +1025,7 @@ namespace DataMatrix.net
 
             if (xStart != 0 && yStart != 0)
             {
-                throw new Exception("CountJumpTally failed, xStart or yStart must be zero!");
+                throw new InvalidOperationException("CountJumpTally failed, xStart or yStart must be zero!");
             }
 
             if (dir == DmtxDirection.DmtxDirRight)
@@ -1048,7 +1045,7 @@ namespace DataMatrix.net
 
             bool darkOnLight = (reg.OffColor > reg.OnColor);
             int jumpThreshold = Math.Abs((int)(0.4 * (reg.OnColor - reg.OffColor) + 0.5));
-            int color = this.ReadModuleColor(reg, yStart, xStart, reg.SizeIdx, reg.FlowBegin.Plane);
+            int color = ReadModuleColor(reg, yStart, xStart, reg.SizeIdx, reg.FlowBegin.Plane);
             int tModule = (darkOnLight) ? reg.OffColor - color : color - reg.OffColor;
 
             for (x = xStart + xInc, y = yStart + yInc;
@@ -1089,13 +1086,13 @@ namespace DataMatrix.net
             int maxDiagonal;
             DmtxBestLine line2X;
 
-            if (this._sizeIdxExpected == DmtxSymbolSize.DmtxSymbolSquareAuto ||
-                  (this._sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol10x10 &&
-                  this._sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol144x144))
+            if (_sizeIdxExpected == DmtxSymbolSize.DmtxSymbolSquareAuto ||
+                  (_sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol10x10 &&
+                  _sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol144x144))
                 symbolShape = DmtxSymbolSize.DmtxSymbolSquareAuto;
-            else if (this._sizeIdxExpected == DmtxSymbolSize.DmtxSymbolRectAuto ||
-                  (this._sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol8x18 &&
-                  this._sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol16x48))
+            else if (_sizeIdxExpected == DmtxSymbolSize.DmtxSymbolRectAuto ||
+                  (_sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol8x18 &&
+                  _sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol16x48))
                 symbolShape = DmtxSymbolSize.DmtxSymbolRectAuto;
             else
                 symbolShape = DmtxSymbolSize.DmtxSymbolShapeAuto;
@@ -1113,23 +1110,23 @@ namespace DataMatrix.net
             }
 
             /* Follow to end in both directions */
-            bool err = this.TrailBlazeContinuous(reg, begin, maxDiagonal);
-            if (err == false || reg.StepsTotal < 40)
+            bool err = TrailBlazeContinuous(reg, begin, maxDiagonal);
+            if (!err || reg.StepsTotal < 40)
             {
                 TrailClear(reg, 0x40);
                 return false;
             }
 
             /* Filter out region candidates that are smaller than expected */
-            if (this._edgeMin != DmtxConstants.DmtxUndefined)
+            if (_edgeMin != DmtxConstants.DmtxUndefined)
             {
                 int scale = _scale;
 
                 int minArea;
                 if (symbolShape == DmtxSymbolSize.DmtxSymbolSquareAuto)
-                    minArea = (this._edgeMin * this._edgeMin) / (scale * scale);
+                    minArea = (_edgeMin * _edgeMin) / (scale * scale);
                 else
-                    minArea = (2 * this._edgeMin * this._edgeMin) / (scale * scale);
+                    minArea = (2 * _edgeMin * _edgeMin) / (scale * scale);
 
                 if ((reg.BoundMax.X - reg.BoundMin.X) * (reg.BoundMax.Y - reg.BoundMin.Y) < minArea)
                 {
@@ -1138,14 +1135,14 @@ namespace DataMatrix.net
                 }
             }
 
-            DmtxBestLine line1X = this.FindBestSolidLine(reg, 0, 0, 1, DmtxConstants.DmtxUndefined);
+            DmtxBestLine line1X = FindBestSolidLine(reg, 0, 0, 1, DmtxConstants.DmtxUndefined);
             if (line1X.Mag < 5)
             {
                 TrailClear(reg, 0x40);
                 return false;
             }
 
-            this.FindTravelLimits(reg, ref line1X);
+            FindTravelLimits(reg, ref line1X);
             if (line1X.DistSq < 100 || line1X.Devn * 10 >= Math.Sqrt(line1X.DistSq))
             {
                 TrailClear(reg, 0x40);
@@ -1153,21 +1150,21 @@ namespace DataMatrix.net
             }
             if (!(line1X.StepPos >= line1X.StepNeg))
             {
-                throw new Exception("Error calculating matrix region orientation");
+                throw new InvalidOperationException("Error calculating matrix region orientation");
             }
 
-            DmtxFollow fTmp = this.FollowSeek(reg, line1X.StepPos + 5);
-            DmtxBestLine line2P = this.FindBestSolidLine(reg, fTmp.Step, line1X.StepNeg, 1, line1X.Angle);
+            DmtxFollow fTmp = FollowSeek(reg, line1X.StepPos + 5);
+            DmtxBestLine line2P = FindBestSolidLine(reg, fTmp.Step, line1X.StepNeg, 1, line1X.Angle);
 
             fTmp = FollowSeek(reg, line1X.StepNeg - 5);
-            DmtxBestLine line2N = this.FindBestSolidLine(reg, fTmp.Step, line1X.StepPos, -1, line1X.Angle);
+            DmtxBestLine line2N = FindBestSolidLine(reg, fTmp.Step, line1X.StepPos, -1, line1X.Angle);
             if (DmtxCommon.Max(line2P.Mag, line2N.Mag) < 5)
                 return false;
 
             if (line2P.Mag > line2N.Mag)
             {
                 line2X = line2P;
-                this.FindTravelLimits(reg, ref line2X);
+                FindTravelLimits(reg, ref line2X);
                 if (line2X.DistSq < 100 || line2X.Devn * 10 >= Math.Sqrt(line2X.DistSq))
                     return false;
 
@@ -1207,7 +1204,7 @@ namespace DataMatrix.net
             else
             {
                 line2X = line2N;
-                this.FindTravelLimits(reg, ref line2X);
+                FindTravelLimits(reg, ref line2X);
                 if (line2X.DistSq < 100 || line2X.Devn / Math.Sqrt(line2X.DistSq) >= 0.1)
                     return false;
 
@@ -1291,10 +1288,10 @@ namespace DataMatrix.net
             }
             if (sign != streamDir)
             {
-                throw new Exception("Sign must equal stream direction!");
+                throw new InvalidOperationException("Sign must equal stream direction!");
             }
 
-            DmtxFollow follow = this.FollowSeek(reg, step0);
+            DmtxFollow follow = FollowSeek(reg, step0);
             DmtxPixelLoc rHp = follow.Loc;
 
             line.StepBeg = line.StepPos = line.StepNeg = step0;
@@ -1371,7 +1368,7 @@ namespace DataMatrix.net
         DmtxFollow FollowSeek(DmtxRegion reg, int seek)
         {
             int i;
-            DmtxFollow follow = new DmtxFollow {Loc = reg.FlowBegin.Loc, Step = 0, Ptr = this._cache};
+            DmtxFollow follow = new DmtxFollow { Loc = reg.FlowBegin.Loc, Step = 0, Ptr = _cache };
 
             follow.PtrIndex = DecodeGetCache(follow.Loc.X, follow.Loc.Y);
 
@@ -1381,7 +1378,7 @@ namespace DataMatrix.net
                 follow = FollowStep(reg, follow, sign);
                 if (Math.Abs(follow.Step) > reg.StepsTotal)
                 {
-                    throw new Exception("Follow step count larger total step count!");
+                    throw new InvalidOperationException("Follow step count larger total step count!");
                 }
             }
             return follow;
@@ -1396,7 +1393,7 @@ namespace DataMatrix.net
 
             DmtxPixelLoc boundMin = boundMax = flowBegin.Loc;
             int cacheBegIndex = DecodeGetCache(flowBegin.Loc.X, flowBegin.Loc.Y);
-            this._cache[cacheBegIndex] = 0x80 | 0x40;
+            _cache[cacheBegIndex] = 0x80 | 0x40;
 
             reg.FlowBegin = flowBegin;
 
@@ -1422,21 +1419,21 @@ namespace DataMatrix.net
 
                     /* Get the neighbor's cache location */
                     int cacheNextIndex = DecodeGetCache(flowNext.Loc.X, flowNext.Loc.Y);
-                    if ((this._cache[cacheNextIndex] & 0x80) != 0)
+                    if ((_cache[cacheNextIndex] & 0x80) != 0)
                     {
-                        throw new Exception("Error creating Trail Blaze");
+                        throw new InvalidOperationException("Error creating Trail Blaze");
                     }
 
                     /* Mark departure from current location. If flowing downstream
                      * (sign < 0) then departure vector here is the arrival vector
                      * of the next location. Upstream flow uses the opposite rule. */
-                    this._cache[cacheIndex] |= (sign < 0) ? (byte)(flowNext.Arrive) : (byte)(flowNext.Arrive << 3);
+                    _cache[cacheIndex] |= (sign < 0) ? (byte)(flowNext.Arrive) : (byte)(flowNext.Arrive << 3);
 
                     /* Mark known direction for next location */
                     /* If testing downstream (sign < 0) then next upstream is opposite of next arrival */
                     /* If testing upstream (sign > 0) then next downstream is opposite of next arrival */
-                    this._cache[cacheNextIndex] = (sign < 0) ? (byte)(((flowNext.Arrive + 4) % 8) << 3) : (byte)((flowNext.Arrive + 4) % 8);
-                    this._cache[cacheNextIndex] |= (0x80 | 0x40); /* Mark location as visited and assigned */
+                    _cache[cacheNextIndex] = (sign < 0) ? (byte)(((flowNext.Arrive + 4) % 8) << 3) : (byte)((flowNext.Arrive + 4) % 8);
+                    _cache[cacheNextIndex] |= (0x80 | 0x40); /* Mark location as visited and assigned */
 
                     if (sign > 0)
                         posAssigns++;
@@ -1473,10 +1470,10 @@ namespace DataMatrix.net
             reg.BoundMax = boundMax;
 
             /* Clear "visited" bit from trail */
-            int clears = this.TrailClear(reg, 0x80);
+            int clears = TrailClear(reg, 0x80);
             if (posAssigns + negAssigns != clears - 1)
             {
-                throw new Exception("Error cleaning after trail blaze continuous");
+                throw new InvalidOperationException("Error cleaning after trail blaze continuous");
             }
 
             /* XXX clean this up ... redundant test above */
@@ -1491,17 +1488,17 @@ namespace DataMatrix.net
         {
             if ((clearMask | 0xff) != 0xff)
             {
-                throw new Exception("TrailClear mask is invalid!");
+                throw new InvalidOperationException("TrailClear mask is invalid!");
             }
 
             /* Clear "visited" bit from trail */
             int clears = 0;
-            DmtxFollow follow = this.FollowSeek(reg, 0);
+            DmtxFollow follow = FollowSeek(reg, 0);
             while (Math.Abs(follow.Step) <= reg.StepsTotal)
             {
                 if ((follow.CurrentPtr & clearMask) == 0x00)
                 {
-                    throw new Exception("Error performing TrailClear");
+                    throw new InvalidOperationException("Error performing TrailClear");
                 }
                 follow.CurrentPtr &= (byte)(clearMask ^ 0xff);
                 follow = FollowStep(reg, follow, +1);
@@ -1519,7 +1516,7 @@ namespace DataMatrix.net
 
             if (Math.Abs(sign) != 1)
             {
-                throw new Exception("Invalid parameter 'sign', can only be -1 or +1");
+                throw new InvalidOperationException("Invalid parameter 'sign', can only be -1 or +1");
             }
 
             int factor = reg.StepsTotal + 1;
@@ -1546,7 +1543,7 @@ namespace DataMatrix.net
             }
 
             follow.Step = followBeg.Step + sign;
-            follow.Ptr = this._cache;
+            follow.Ptr = _cache;
             follow.PtrIndex = DecodeGetCache(follow.Loc.X, follow.Loc.Y);
 
             return follow;
@@ -1562,7 +1559,7 @@ namespace DataMatrix.net
             DmtxPixelLoc negMax;
 
             /* line->stepBeg is already known to sit on the best Hough line */
-            DmtxFollow followPos = followNeg = this.FollowSeek(reg, line.StepBeg);
+            DmtxFollow followPos = followNeg = FollowSeek(reg, line.StepBeg);
             DmtxPixelLoc loc0 = followPos.Loc;
 
             int cosAngle = DmtxConstants.rHvX[line.Angle];
@@ -1759,8 +1756,8 @@ namespace DataMatrix.net
         bool RegionUpdateCorners(DmtxRegion reg, DmtxVector2 p00,
      DmtxVector2 p10, DmtxVector2 p11, DmtxVector2 p01)
         {
-            double xMax = this.Width - 1;
-            double yMax = this.Height - 1;
+            double xMax = Width - 1;
+            double yMax = Height - 1;
 
             if (p00.X < 0.0 || p00.Y < 0.0 || p00.X > xMax || p00.Y > yMax ||
                   p01.X < 0.0 || p01.Y < 0.0 || p01.X > xMax || p01.Y > yMax ||
@@ -1793,9 +1790,9 @@ namespace DataMatrix.net
             if (vOR.Cross(vRX) <= 0.0 || vOT.Cross(vTX) >= 0.0)
                 return false;
 
-            if (DmtxCommon.RightAngleTrueness(p00, p10, p11, Math.PI / 2.0) <= this._squareDevn)
+            if (DmtxCommon.RightAngleTrueness(p00, p10, p11, Math.PI / 2.0) <= _squareDevn)
                 return false;
-            if (DmtxCommon.RightAngleTrueness(p10, p11, p01, Math.PI / 2.0) <= this._squareDevn)
+            if (DmtxCommon.RightAngleTrueness(p10, p11, p01, Math.PI / 2.0) <= _squareDevn)
                 return false;
 
             /* Calculate values needed for transformations */
@@ -1868,13 +1865,13 @@ namespace DataMatrix.net
             locOrigin.X = (int)(pTmp.X + 0.5);
             locOrigin.Y = (int)(pTmp.Y + 0.5);
 
-            if (this._sizeIdxExpected == DmtxSymbolSize.DmtxSymbolSquareAuto ||
-                  (this._sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol10x10 &&
-                  this._sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol144x144))
+            if (_sizeIdxExpected == DmtxSymbolSize.DmtxSymbolSquareAuto ||
+                  (_sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol10x10 &&
+                  _sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol144x144))
                 symbolShape = DmtxSymbolSize.DmtxSymbolSquareAuto;
-            else if (this._sizeIdxExpected == DmtxSymbolSize.DmtxSymbolRectAuto ||
-                  (this._sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol8x18 &&
-                  this._sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol16x48))
+            else if (_sizeIdxExpected == DmtxSymbolSize.DmtxSymbolRectAuto ||
+                  (_sizeIdxExpected >= DmtxSymbolSize.DmtxSymbol8x18 &&
+                  _sizeIdxExpected <= DmtxSymbolSize.DmtxSymbol16x48))
                 symbolShape = DmtxSymbolSize.DmtxSymbolRectAuto;
             else
                 symbolShape = DmtxSymbolSize.DmtxSymbolShapeAuto;
@@ -1903,9 +1900,9 @@ namespace DataMatrix.net
 
             DmtxPixelLoc loc0 = follow.Loc;
             DmtxBresLine line = new DmtxBresLine(loc0, loc1, locOrigin);
-            int steps = this.TrailBlazeGapped(reg, line, streamDir);
+            int steps = TrailBlazeGapped(reg, line, streamDir);
 
-            DmtxBestLine bestLine = this.FindBestSolidLine2(loc0, steps, streamDir, avoidAngle);
+            DmtxBestLine bestLine = FindBestSolidLine2(loc0, steps, streamDir, avoidAngle);
 
             if (edgeLoc == DmtxEdge.DmtxEdgeTop)
             {
@@ -1931,7 +1928,7 @@ namespace DataMatrix.net
             int[] dirMap = { 0, 1, 2, 7, 8, 3, 6, 5, 4 };
 
             DmtxPixelLoc loc0 = line.Loc;
-            DmtxPointFlow flow = this.GetPointFlow(reg.FlowBegin.Plane, loc0, DmtxConstants.DmtxNeighborNone);
+            DmtxPointFlow flow = GetPointFlow(reg.FlowBegin.Plane, loc0, DmtxConstants.DmtxNeighborNone);
             int distSqMax = (line.XDelta * line.XDelta) + (line.YDelta * line.YDelta);
             int steps = 0;
             bool onEdge = true;
@@ -1940,8 +1937,8 @@ namespace DataMatrix.net
             int beforeCacheIndex = DecodeGetCache(loc0.X, loc0.Y);
             if (beforeCacheIndex == -1)
                 return 0;
-            
-            this._cache[beforeCacheIndex] = 0;
+
+            _cache[beforeCacheIndex] = 0;
 
             do
             {
@@ -1981,23 +1978,23 @@ namespace DataMatrix.net
                 int yStep = afterStep.Y - beforeStep.Y;
                 if (Math.Abs(xStep) > 1 || Math.Abs(yStep) > 1)
                 {
-                    throw new Exception("Invalid step directions!");
+                    throw new InvalidOperationException("Invalid step directions!");
                 }
                 int stepDir = dirMap[3 * yStep + xStep + 4];
 
                 if (stepDir == 8)
                 {
-                    throw new Exception("Invalid step direction!");
+                    throw new InvalidOperationException("Invalid step direction!");
                 }
                 if (streamDir < 0)
                 {
-                    this._cache[beforeCacheIndex] |= (byte)(0x40 | stepDir);
-                    this._cache[afterCacheIndex] = (byte)(((stepDir + 4) % 8) << 3);
+                    _cache[beforeCacheIndex] |= (byte)(0x40 | stepDir);
+                    _cache[afterCacheIndex] = (byte)(((stepDir + 4) % 8) << 3);
                 }
                 else
                 {
-                    this._cache[beforeCacheIndex] |= (byte)(0x40 | (stepDir << 3));
-                    this._cache[afterCacheIndex] = (byte)((stepDir + 4) % 8);
+                    _cache[beforeCacheIndex] |= (byte)(0x40 | (stepDir << 3));
+                    _cache[afterCacheIndex] = (byte)((stepDir + 4) % 8);
                 }
 
                 /* Guaranteed to have taken one step since top of loop */
@@ -2025,7 +2022,7 @@ namespace DataMatrix.net
             int angleBest = 0;
             int hOffsetBest = 0;
 
-            DmtxFollow follow = this.FollowSeekLoc(loc0);
+            DmtxFollow follow = FollowSeekLoc(loc0);
             DmtxPixelLoc rHp = line.LocBeg = line.LocPos = line.LocNeg = follow.Loc;
             line.StepBeg = line.StepPos = line.StepNeg = 0;
 
@@ -2098,18 +2095,18 @@ namespace DataMatrix.net
 
             if (Math.Abs(sign) != 1)
             {
-                throw new Exception("Invalid parameter 'sign', can only be -1 or +1");
+                throw new InvalidOperationException("Invalid parameter 'sign', can only be -1 or +1");
             }
             if ((followBeg.Neighbor & 0x40) == 0x00)
             {
-                throw new Exception("Invalid value for neighbor!");
+                throw new InvalidOperationException("Invalid value for neighbor!");
             }
 
             int patternIdx = (sign < 0) ? followBeg.Neighbor & 0x07 : ((followBeg.Neighbor & 0x38) >> 3);
             follow.Loc = new DmtxPixelLoc { X = followBeg.Loc.X + DmtxConstants.DmtxPatternX[patternIdx], Y = followBeg.Loc.Y + DmtxConstants.DmtxPatternY[patternIdx] };
 
             follow.Step = followBeg.Step + sign;
-            follow.Ptr = this._cache;
+            follow.Ptr = _cache;
             follow.PtrIndex = DecodeGetCache(follow.Loc.X, follow.Loc.Y);
 
             return follow;
@@ -2117,7 +2114,7 @@ namespace DataMatrix.net
 
         DmtxFollow FollowSeekLoc(DmtxPixelLoc loc)
         {
-            DmtxFollow follow = new DmtxFollow {Loc = loc, Step = 0, Ptr = this._cache};
+            DmtxFollow follow = new DmtxFollow { Loc = loc, Step = 0, Ptr = _cache };
 
             follow.PtrIndex = DecodeGetCache(follow.Loc.X, follow.Loc.Y);
 
@@ -2129,7 +2126,7 @@ namespace DataMatrix.net
         internal int EdgeMin
         {
             get { return _edgeMin; }
-            set
+            private set
             {
                 _edgeMin = value;
                 ValidateSettingsAndInitScanGrid();
@@ -2139,98 +2136,81 @@ namespace DataMatrix.net
         internal int EdgeMax
         {
             get { return _edgeMax; }
-            set { _edgeMax = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _edgeMax = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int ScanGap
         {
             get { return _scanGap; }
-            set { _scanGap = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _scanGap = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int SquareDevn
         {
-            get { return (int)(Math.Acos(this._squareDevn) * 180.0 / Math.PI); }
-            set { _squareDevn = Math.Cos(value * (Math.PI / 180.0)); ValidateSettingsAndInitScanGrid(); }
+            get { return (int)(Math.Acos(_squareDevn) * 180.0 / Math.PI); }
+            private set { _squareDevn = Math.Cos(value * (Math.PI / 180.0)); ValidateSettingsAndInitScanGrid(); }
         }
 
         internal DmtxSymbolSize SizeIdxExpected
         {
             get { return _sizeIdxExpected; }
-            set { _sizeIdxExpected = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _sizeIdxExpected = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int EdgeThresh
         {
             get { return _edgeThresh; }
-            set { _edgeThresh = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _edgeThresh = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int XMin
         {
             get { return _xMin; }
-            set { _xMin = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _xMin = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int XMax
         {
             get { return _xMax; }
-            set { _xMax = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _xMax = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int YMin
         {
             get { return _yMin; }
-            set { _yMin = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _yMin = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int YMax
         {
             get { return _yMax; }
-            set { _yMax = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _yMax = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal int Scale
         {
             get { return _scale; }
-            set { _scale = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _scale = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal byte[] Cache
         {
             get { return _cache; }
-            set { _cache = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _cache = value; ValidateSettingsAndInitScanGrid(); }
         }
 
         internal DmtxImage Image
         {
             get { return _image; }
-            set { _image = value; ValidateSettingsAndInitScanGrid(); }
+            private set { _image = value; ValidateSettingsAndInitScanGrid(); }
         }
 
 
-        internal DmtxScanGrid Grid
-        {
-            get { return _grid; }
-            set { _grid = value; }
-        }
+        internal DmtxScanGrid Grid { get; private set; }
 
-        internal int Height
-        {
-            get
-            {
-                return _image.Height / _scale;
-            }
-        }
+        internal int Height => _image.Height / _scale;
 
-
-        internal int Width
-        {
-            get
-            {
-                return _image.Width / _scale;
-            }
-        }
+        internal int Width => _image.Width / _scale;
         #endregion
     }
 }

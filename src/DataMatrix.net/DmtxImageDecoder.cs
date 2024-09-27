@@ -28,81 +28,46 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Text;
 
 namespace DataMatrix.net
 {
     public class DmtxImageDecoder
     {
         /// <summary>
-        /// returns a list of all decoded DataMatrix codes in the image provided
-        /// </summary>
-        public List<string> DecodeImage(Bitmap image)
-        {
-            return DecodeImage(image, int.MaxValue, TimeSpan.MaxValue);
-        }
-
-        /// <summary>
-        /// returns a list of all decoded DataMatrix codes in the image provided
-        /// that can be found in the given time span
-        /// </summary>
-        public List<string> DecodeImage(Bitmap image, TimeSpan timeSpan)
-        {
-            return DecodeImage(image, int.MaxValue, timeSpan);
-        }
-
-        /// <summary>
-        /// returns a list of all decoded DataMatrix codes in the image provided
-        /// </summary>
-        public List<string> DecodeImageMosaic(Bitmap image)
-        {
-            return DecodeImageMosaic(image, int.MaxValue, TimeSpan.MaxValue);
-        }
-
-        /// <summary>
         /// returns a list of DataMatrix codes in the image provided that can be
         /// found in the given time span, but no more than maxResultCount codes
         /// (useful, if you e.g. expect only one code to be in the image)
         /// </summary>
-        public List<string> DecodeImageMosaic(Bitmap image, int maxResultCount, TimeSpan timeOut)
+        public List<string> DecodeImageMosaic(SKBitmap image, int maxResultCount = int.MaxValue, TimeSpan timeOut = default)
         {
             return DecodeImage(image, maxResultCount, timeOut, true);
         }
 
         /// <summary>
-        /// returns a list of all decoded DataMatrix codes in the image provided
-        /// that can be found in the given time span
-        /// </summary>
-        public List<string> DecodeImageMosaic(Bitmap image, TimeSpan timeSpan)
-        {
-            return DecodeImage(image, int.MaxValue, timeSpan);
-        }
-
-        /// <summary>
         /// returns a list of DataMatrix codes in the image provided that can be
         /// found in the given time span, but no more than maxResultCount codes
         /// (useful, if you e.g. expect only one code to be in the image)
         /// </summary>
-        public List<string> DecodeImage(Bitmap image, int maxResultCount, TimeSpan timeOut)
+        public List<string> DecodeImage(SKBitmap image, int maxResultCount = int.MaxValue, TimeSpan timeOut = default, bool isMosaic = false)
         {
-            return DecodeImage(image, maxResultCount, timeOut, false);
-        }
-
-        private List<string> DecodeImage(Bitmap image, int maxResultCount, TimeSpan timeOut, bool isMosaic)
-        {
-            List<string> result = new List<string>();
-            int stride;
-            byte[] rawImg = ImageToByteArray(image, out stride);
-            DmtxImage dmtxImg = new DmtxImage(rawImg, image.Width, image.Height, DmtxPackOrder.DmtxPack24bppRGB);
-            dmtxImg.RowPadBytes = stride % 3;
-            DmtxDecode decode = new DmtxDecode(dmtxImg, 1);
-            Stopwatch stopWatch = new Stopwatch();
+            if (timeOut == default)
+            {
+                timeOut = TimeSpan.MaxValue;
+            }
+            List<string> result = [];
+            byte[] rawImg = image.Bytes;
+            var pad = image.RowBytes - image.Width * image.BytesPerPixel;
+            DmtxImage dmtxImg = new(rawImg, image.Width, image.Height, DmtxPackOrder.DmtxPack32bppRGBX)
+            {
+                RowPadBytes = pad
+            };
+            DmtxDecode decode = new(dmtxImg, 1);
+            Stopwatch stopWatch = new();
             stopWatch.Start();
             while (true)
             {
@@ -131,24 +96,6 @@ namespace DataMatrix.net
                 }
             }
             return result;
-        }
-
-
-        private byte[] ImageToByteArray(Bitmap b, out int stride)
-        {
-            Rectangle rect = new Rectangle(0, 0, b.Width, b.Height);
-            BitmapData bd = b.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-            try
-            {
-                byte[] pxl = new byte[bd.Stride * b.Height];
-                Marshal.Copy(bd.Scan0, pxl, 0, bd.Stride * b.Height);
-                stride = bd.Stride;
-                return pxl;
-            }
-            finally
-            {
-                b.UnlockBits(bd);
-            }
         }
     }
 }

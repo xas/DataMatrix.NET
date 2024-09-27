@@ -41,7 +41,7 @@ namespace DataMatrix.net
         #region Properties
         internal DmtxVector2 P
         {
-            get { return this._p ?? (this._p = new DmtxVector2()); }
+            get { return _p ??= new DmtxVector2(); }
             set
             {
                 _p = value;
@@ -50,7 +50,7 @@ namespace DataMatrix.net
 
         internal DmtxVector2 V
         {
-            get { return this._v ?? (this._v = new DmtxVector2()); }
+            get { return _v ??= new DmtxVector2(); }
             set
             {
                 _v = value;

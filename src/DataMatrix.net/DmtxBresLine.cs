@@ -34,38 +34,22 @@ namespace DataMatrix.net
 {
     internal struct DmtxBresLine
     {
-        #region Fields
-        int _xStep;
-        int _yStep;
-        int _xDelta;
-        int _yDelta;
-        bool _steep;
-        int _xOut;
-        int _yOut;
-        int _travel;
-        int _outward;
-        int _error;
-        DmtxPixelLoc _loc;
-        DmtxPixelLoc _loc0;
-        DmtxPixelLoc _loc1;
-        #endregion
-
         #region Constructors
         internal DmtxBresLine(DmtxBresLine orig)
         {
-            this._error = orig._error;
-            this._loc = new DmtxPixelLoc { X = orig._loc.X, Y = orig._loc.Y };
-            this._loc0 = new DmtxPixelLoc { X = orig._loc0.X, Y = orig._loc0.Y };
-            this._loc1 = new DmtxPixelLoc { X = orig._loc1.X, Y = orig._loc1.Y };
-            this._outward = orig._outward;
-            this._steep = orig._steep;
-            this._travel = orig._travel;
-            this._xDelta = orig._xDelta;
-            this._xOut = orig._xOut;
-            this._xStep = orig._xStep;
-            this._yDelta = orig._yDelta;
-            this._yOut = orig._yOut;
-            this._yStep = orig._yStep;
+            Error = orig.Error;
+            Loc = new DmtxPixelLoc { X = orig.Loc.X, Y = orig.Loc.Y };
+            Loc0 = new DmtxPixelLoc { X = orig.Loc0.X, Y = orig.Loc0.Y };
+            Loc1 = new DmtxPixelLoc { X = orig.Loc1.X, Y = orig.Loc1.Y };
+            Outward = orig.Outward;
+            Steep = orig.Steep;
+            Travel = orig.Travel;
+            XDelta = orig.XDelta;
+            XOut = orig.XOut;
+            XStep = orig.XStep;
+            YDelta = orig.YDelta;
+            YOut = orig.YOut;
+            YStep = orig.YStep;
         }
 
         internal DmtxBresLine(DmtxPixelLoc loc0, DmtxPixelLoc loc1, DmtxPixelLoc locInside)
@@ -75,16 +59,16 @@ namespace DataMatrix.net
 
 
             /* Values that stay the same after initialization */
-            this._loc0 = loc0;
-            this._loc1 = loc1;
-            this._xStep = (loc0.X < loc1.X) ? +1 : -1;
-            this._yStep = (loc0.Y < loc1.Y) ? +1 : -1;
-            this._xDelta = Math.Abs(loc1.X - loc0.X);
-            this._yDelta = Math.Abs(loc1.Y - loc0.Y);
-            this._steep = (this._yDelta > this._xDelta);
+            Loc0 = loc0;
+            Loc1 = loc1;
+            XStep = (loc0.X < loc1.X) ? +1 : -1;
+            YStep = (loc0.Y < loc1.Y) ? +1 : -1;
+            XDelta = Math.Abs(loc1.X - loc0.X);
+            YDelta = Math.Abs(loc1.Y - loc0.Y);
+            Steep = (YDelta > XDelta);
 
             /* Take cross product to determine outward step */
-            if (this._steep)
+            if (Steep)
             {
                 /* Point first vector up to get correct sign */
                 if (loc0.Y < loc1.Y)
@@ -100,8 +84,8 @@ namespace DataMatrix.net
                 cp = (((locEnd.X - locBeg.X) * (locInside.Y - locEnd.Y)) -
                       ((locEnd.Y - locBeg.Y) * (locInside.X - locEnd.X)));
 
-                this._xOut = (cp > 0) ? +1 : -1;
-                this._yOut = 0;
+                XOut = (cp > 0) ? +1 : -1;
+                YOut = 0;
             }
             else
             {
@@ -119,15 +103,15 @@ namespace DataMatrix.net
                 cp = (((locEnd.X - locBeg.X) * (locInside.Y - locEnd.Y)) -
                       ((locEnd.Y - locBeg.Y) * (locInside.X - locEnd.X)));
 
-                this._xOut = 0;
-                this._yOut = (cp > 0) ? +1 : -1;
+                XOut = 0;
+                YOut = (cp > 0) ? +1 : -1;
             }
 
             /* Values that change while stepping through line */
-            this._loc = loc0;
-            this._travel = 0;
-            this._outward = 0;
-            this._error = (this._steep) ? this._yDelta / 2 : this._xDelta / 2;
+            Loc = loc0;
+            Travel = 0;
+            Outward = 0;
+            Error = (Steep) ? YDelta / 2 : XDelta / 2;
         }
         #endregion
 
@@ -135,24 +119,24 @@ namespace DataMatrix.net
         internal bool GetStep(DmtxPixelLoc target, ref int travel, ref int outward)
         {
             /* Determine necessary step along and outward from Bresenham line */
-            if (this._steep)
+            if (Steep)
             {
-                travel = (this._yStep > 0) ? target.Y - this._loc.Y : this._loc.Y - target.Y;
+                travel = (YStep > 0) ? target.Y - Loc.Y : Loc.Y - target.Y;
                 Step(travel, 0);
-                outward = (this._xOut > 0) ? target.X - this._loc.X : this._loc.X - target.X;
-                if (this._yOut != 0)
+                outward = (XOut > 0) ? target.X - Loc.X : Loc.X - target.X;
+                if (YOut != 0)
                 {
-                    throw new Exception("Invald yOut value for bresline step!");
+                    throw new InvalidOperationException("Invald yOut value for bresline step!");
                 }
             }
             else
             {
-                travel = (this._xStep > 0) ? target.X - this._loc.X : this._loc.X - target.X;
+                travel = (XStep > 0) ? target.X - Loc.X : Loc.X - target.X;
                 Step(travel, 0);
-                outward = (this._yOut > 0) ? target.Y - this._loc.Y : this._loc.Y - target.Y;
-                if (this._xOut != 0)
+                outward = (YOut > 0) ? target.Y - Loc.Y : Loc.Y - target.Y;
+                if (XOut != 0)
                 {
-                    throw new Exception("Invald xOut value for bresline step!");
+                    throw new InvalidOperationException("Invald xOut value for bresline step!");
                 }
             }
 
@@ -172,49 +156,49 @@ namespace DataMatrix.net
             /* Perform forward step */
             if (travel > 0)
             {
-                this._travel++;
-                if (this._steep)
+                Travel++;
+                if (Steep)
                 {
-                    this._loc = new DmtxPixelLoc() { X = this._loc.X, Y = this._loc.Y + this._yStep };
-                    this._error -= this._xDelta;
-                    if (this._error < 0)
+                    Loc = new DmtxPixelLoc() { X = Loc.X, Y = Loc.Y + YStep };
+                    Error -= XDelta;
+                    if (Error < 0)
                     {
-                        this._loc = new DmtxPixelLoc() { X = this._loc.X + this._xStep, Y = this._loc.Y };
-                        this._error += this._yDelta;
+                        Loc = new DmtxPixelLoc() { X = Loc.X + XStep, Y = Loc.Y };
+                        Error += YDelta;
                     }
                 }
                 else
                 {
-                    this._loc = new DmtxPixelLoc() { X = this._loc.X + this._xStep, Y = this._loc.Y };
-                    this._error -= this._yDelta;
-                    if (this._error < 0)
+                    Loc = new DmtxPixelLoc() { X = Loc.X + XStep, Y = Loc.Y };
+                    Error -= YDelta;
+                    if (Error < 0)
                     {
-                        this._loc = new DmtxPixelLoc() { X = this._loc.X, Y = this._loc.Y + this._yStep };
-                        this._error += this._xDelta;
+                        Loc = new DmtxPixelLoc() { X = Loc.X, Y = Loc.Y + YStep };
+                        Error += XDelta;
                     }
                 }
             }
             else if (travel < 0)
             {
-                this._travel--;
-                if (this._steep)
+                Travel--;
+                if (Steep)
                 {
-                    this._loc = new DmtxPixelLoc() { X = this._loc.X, Y = this._loc.Y - this._yStep };
-                    this._error += this._xDelta;
-                    if (this.Error >= this.YDelta)
+                    Loc = new DmtxPixelLoc() { X = Loc.X, Y = Loc.Y - YStep };
+                    Error += XDelta;
+                    if (Error >= YDelta)
                     {
-                        this._loc = new DmtxPixelLoc() { X = this._loc.X - this._xStep, Y = this._loc.Y };
-                        this._error -= this._yDelta;
+                        Loc = new DmtxPixelLoc() { X = Loc.X - XStep, Y = Loc.Y };
+                        Error -= YDelta;
                     }
                 }
                 else
                 {
-                    this._loc = new DmtxPixelLoc() { X = this._loc.X - this._xStep, Y = this._loc.Y };
-                    this._error += this._yDelta;
-                    if (this._error >= this._xDelta)
+                    Loc = new DmtxPixelLoc() { X = Loc.X - XStep, Y = Loc.Y };
+                    Error += YDelta;
+                    if (Error >= XDelta)
                     {
-                        this._loc = new DmtxPixelLoc() { X = this._loc.X, Y = this._loc.Y - this._yStep };
-                        this._error -= this._xDelta;
+                        Loc = new DmtxPixelLoc() { X = Loc.X, Y = Loc.Y - YStep };
+                        Error -= XDelta;
                     }
                 }
             }
@@ -222,8 +206,8 @@ namespace DataMatrix.net
             for (i = 0; i < outward; i++)
             {
                 /* Outward steps */
-                this._outward++;
-                this._loc = new DmtxPixelLoc() { X = this._loc.X + this._xOut, Y = this._loc.Y + this._yOut };
+                Outward++;
+                Loc = new DmtxPixelLoc() { X = Loc.X + XOut, Y = Loc.Y + YOut };
             }
 
             return true;
@@ -231,84 +215,32 @@ namespace DataMatrix.net
         #endregion
 
         #region Properties
-        internal int XStep
-        {
-            get { return _xStep; }
-            set { _xStep = value; }
-        }
+        internal int XStep { get; private set; }
 
-        internal int YStep
-        {
-            get { return _yStep; }
-            set { _yStep = value; }
-        }
+        internal int YStep { get; private set; }
 
-        internal int XDelta
-        {
-            get { return _xDelta; }
-            set { _xDelta = value; }
-        }
+        internal int XDelta { get; private set; }
 
-        internal int YDelta
-        {
-            get { return _yDelta; }
-            set { _yDelta = value; }
-        }
+        internal int YDelta { get; private set; }
 
-        internal bool Steep
-        {
-            get { return _steep; }
-            set { _steep = value; }
-        }
+        internal bool Steep { get; private set; }
 
-        internal int XOut
-        {
-            get { return _xOut; }
-            set { _xOut = value; }
-        }
+        internal int XOut { get; private set; }
 
-        internal int YOut
-        {
-            get { return _yOut; }
-            set { _yOut = value; }
-        }
+        internal int YOut { get; private set; }
 
-        internal int Travel
-        {
-            get { return _travel; }
-            set { _travel = value; }
-        }
+        internal int Travel { get; private set; }
 
-        internal int Outward
-        {
-            get { return _outward; }
-            set { _outward = value; }
-        }
+        internal int Outward { get; private set; }
 
-        internal int Error
-        {
-            get { return _error; }
-            set { _error = value; }
-        }
+        internal int Error { get; private set; }
 
-        internal DmtxPixelLoc Loc
-        {
-            get { return _loc; }
-            set { _loc = value; }
-        }
+        internal DmtxPixelLoc Loc { get; private set; }
 
 
-        internal DmtxPixelLoc Loc0
-        {
-            get { return _loc0; }
-            set { _loc0 = value; }
-        }
+        internal DmtxPixelLoc Loc0 { get; private set; }
 
-        internal DmtxPixelLoc Loc1
-        {
-            get { return _loc1; }
-            set { _loc1 = value; }
-        }
+        internal DmtxPixelLoc Loc1 { get; private set; }
         #endregion
     }
 }

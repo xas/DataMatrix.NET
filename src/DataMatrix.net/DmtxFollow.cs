@@ -32,29 +32,18 @@ namespace DataMatrix.net
 {
     internal struct DmtxFollow
     {
-        #region Fields
-
-        int _ptrIndex;
-        #endregion
-
         #region Properties
-        internal int PtrIndex
-        {
-            set
-            {
-                _ptrIndex = value;
-            }
-        }
+        internal int PtrIndex { get; set; }
 
         internal byte CurrentPtr
         {
             get
             {
-                return this.Ptr[_ptrIndex];
+                return Ptr[PtrIndex];
             }
             set
             {
-                this.Ptr[_ptrIndex] = value;
+                Ptr[PtrIndex] = value;
             }
         }
 
@@ -64,11 +53,11 @@ namespace DataMatrix.net
         {
             get
             {
-                return this.Ptr[_ptrIndex];
+                return Ptr[PtrIndex];
             }
             set
             {
-                this.Ptr[_ptrIndex] = value;
+                Ptr[PtrIndex] = value;
             }
         }
 
