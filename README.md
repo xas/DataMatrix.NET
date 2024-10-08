@@ -1,5 +1,18 @@
 # DataMatrix.Net
 
+!BREAKING CHANGES: `DmtxImageDecoder` class not working
+
+## Current update
+
+At first the fork was to create a simple library compatible with .net core 3.1.  
+After `SystemDrawing.Common` became "Windows-only" starting with .net6.0, I am trying to migrate the code to a more multi-platform environment replacing the previous library with `Skia.Sharp`.  
+
+At the same time there are a lot of cleanup code, migrating from `C` coding style to a more `.net` one.
+
+Currently in alpha phase, the `encode` workflow seems fine, but the `decode` workflow is not working at all.
+
+**DOT NOT USE** this package if you need the `DmtxImageDecoder` class.
+
 ## .NET library for decoding DataMatrix codes
 
 by Michael Faschinger <michfasch@gmx.at> https://sourceforge.net/projects/datamatrixnet
