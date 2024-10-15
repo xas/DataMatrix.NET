@@ -28,19 +28,40 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
-    internal class DmtxPointFlow
+    internal struct DmtxFollow
     {
         #region Properties
+        internal int PtrIndex { get; set; }
 
-        internal int Plane { get; set; }
+        internal byte CurrentPtr
+        {
+            get
+            {
+                return Ptr[PtrIndex];
+            }
+            set
+            {
+                Ptr[PtrIndex] = value;
+            }
+        }
 
-        internal int Arrive { get; set; }
+        internal byte[] Ptr { get; set; }
 
-        internal int Depart { get; set; }
+        internal byte Neighbor
+        {
+            get
+            {
+                return Ptr[PtrIndex];
+            }
+            set
+            {
+                Ptr[PtrIndex] = value;
+            }
+        }
 
-        internal int Mag { get; set; }
+        internal int Step { get; set; }
 
         internal DmtxPixelLoc Loc { get; set; }
 

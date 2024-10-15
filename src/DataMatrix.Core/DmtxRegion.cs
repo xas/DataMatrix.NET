@@ -28,7 +28,7 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
     internal class DmtxRegion
     {

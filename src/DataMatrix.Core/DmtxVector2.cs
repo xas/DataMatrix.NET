@@ -30,7 +30,7 @@ Contact: Michael Faschinger - michfasch@gmx.at
 
 using System;
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
     internal class DmtxVector2
     {

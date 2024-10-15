@@ -34,7 +34,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
     public class DmtxImageDecoder
     {

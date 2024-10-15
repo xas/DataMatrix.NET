@@ -32,7 +32,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
     internal class DmtxEncode
     {

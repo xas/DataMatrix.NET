@@ -28,18 +28,50 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
-
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
-    internal struct C40TextState
+    internal class DmtxChannel
     {
-        #region Properties
+        byte[] _encodedWords;
 
-        internal int Shift { get; set; }
+        internal byte[] Input { get; set; }
 
-        internal bool UpperShift { get; set; }
+        internal DmtxScheme EncScheme { get; set; }
 
-        #endregion
+        internal DmtxChannelStatus Invalid { get; set; }
 
+        internal int InputIndex { get; set; }
+
+        internal int EncodedLength { get; set; }
+
+        internal int CurrentLength { get; set; }
+
+        internal int FirstCodeWord { get; set; }
+
+        internal byte[] EncodedWords
+        {
+            get { return _encodedWords ?? (_encodedWords = new byte[1558]); }
+        }
+    }
+
+    internal class DmtxChannelGroup
+    {
+        DmtxChannel[] _channels;
+
+        internal DmtxChannel[] Channels
+        {
+            get
+            {
+                if (_channels == null)
+                {
+                    _channels = new DmtxChannel[6];
+                    for (int i = 0; i < 6; i++)
+                    {
+                        _channels[i] = new DmtxChannel();
+                    }
+                }
+                return _channels;
+            }
+        }
     }
 }

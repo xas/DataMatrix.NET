@@ -28,7 +28,7 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
-using DataMatrix.net;
+using DataMatrix.Core;
 using NUnit.Framework;
 using SkiaSharp;
 using System;
@@ -41,7 +41,7 @@ namespace DataMatrixTest
     [TestFixture]
     class BarCodeTests
     {
-        private static string testVal = "Hello World!";
+        private readonly string testVal = "Hello World!";
 
         [Test]
         public void TestMatrixEnDecoder()
@@ -62,7 +62,7 @@ namespace DataMatrixTest
             }
 
             string s = encoder.EncodeSvgImage("DataMatrix.net rocks!!one!eleven!!111!eins!!!!", 7, 7, Color.FromArgb(100, 255, 0, 0), Color.Turquoise);
-            TextWriter tw = new StreamWriter("encodedImg.svg");
+            StreamWriter tw = new("encodedImg.svg");
             tw.Write(s);
             tw.Flush();
             tw.Close();
@@ -141,7 +141,7 @@ namespace DataMatrixTest
             Console.WriteLine("Encoded code 1: {0}, decoded code 1: {1}, codes are equal: {2}", gs1Code, decodedCodes[0], gs1Code.Equals(decodedCodes[0]));
         }
 
-        private void TestRawEncoder(string text)
+        private static void TestRawEncoder(string text)
         {
             DmtxImageEncoder encoder = new();
             bool[,] rawData = encoder.EncodeRawData(text);

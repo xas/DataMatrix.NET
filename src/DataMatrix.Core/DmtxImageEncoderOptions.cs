@@ -28,29 +28,44 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
-namespace DataMatrix.net
+using System.Drawing;
+using System.Text;
+
+namespace DataMatrix.Core
 {
-    internal struct DmtxTriplet
+    public class DmtxImageEncoderOptions
     {
-        byte[] _value;
+        #region Constructor
 
-        internal byte[] Value
+        public DmtxImageEncoderOptions()
         {
-            get { return _value ?? (_value = new byte[3]); }
+            BackColor = Color.White;
+            ForeColor = Color.Black;
+            SizeIdx = DmtxSymbolSize.DmtxSymbolSquareAuto;
+            Scheme = DmtxScheme.DmtxSchemeAscii;
+            ModuleSize = 5;
+            MarginSize = 10;
+            Encoding = Encoding.ASCII;
         }
-    }
 
-    /**
-     * @struct DmtxQuadruplet
-     * @brief DmtxQuadruplet
-     */
-    internal struct DmtxQuadruplet
-    {
-        byte[] _value;
+        #endregion
 
-        internal byte[] Value
-        {
-            get { return _value ?? (_value = new byte[4]); }
-        }
+        #region Properties
+
+        public int MarginSize { get; set; }
+
+        public int ModuleSize { get; set; }
+
+        public DmtxScheme Scheme { get; set; }
+
+        public DmtxSymbolSize SizeIdx { get; set; }
+
+        public Color ForeColor { get; set; }
+
+        public Color BackColor { get; set; }
+
+        public Encoding Encoding { get; set; }
+
+        #endregion
     }
 }

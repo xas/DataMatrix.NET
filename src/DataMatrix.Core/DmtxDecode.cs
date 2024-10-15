@@ -31,7 +31,7 @@ Contact: Michael Faschinger - michfasch@gmx.at
 using System;
 using System.Collections.Generic;
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
     internal class DmtxDecode
     {

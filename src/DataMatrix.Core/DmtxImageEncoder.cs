@@ -35,7 +35,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
     public class DmtxImageEncoder
     {

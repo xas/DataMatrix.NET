@@ -12,6 +12,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\DataMatrix.net\DataMatrix.net.csproj" />
+		<ProjectReference Include="..\DataMatrix.Core\DataMatrix.Core.csproj" />
 	</ItemGroup>
 </Project>

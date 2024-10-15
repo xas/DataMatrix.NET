@@ -28,50 +28,29 @@ Contact: Michael Faschinger - michfasch@gmx.at
  
 */
 
-namespace DataMatrix.net
+namespace DataMatrix.Core
 {
-    internal class DmtxChannel
+    internal struct DmtxTriplet
     {
-        byte[] _encodedWords;
+        byte[] _value;
 
-        internal byte[] Input { get; set; }
-
-        internal DmtxScheme EncScheme { get; set; }
-
-        internal DmtxChannelStatus Invalid { get; set; }
-
-        internal int InputIndex { get; set; }
-
-        internal int EncodedLength { get; set; }
-
-        internal int CurrentLength { get; set; }
-
-        internal int FirstCodeWord { get; set; }
-
-        internal byte[] EncodedWords
+        internal byte[] Value
         {
-            get { return _encodedWords ?? (_encodedWords = new byte[1558]); }
+            get { return _value ?? (_value = new byte[3]); }
         }
     }
 
-    internal class DmtxChannelGroup
+    /**
+     * @struct DmtxQuadruplet
+     * @brief DmtxQuadruplet
+     */
+    internal struct DmtxQuadruplet
     {
-        DmtxChannel[] _channels;
+        byte[] _value;
 
-        internal DmtxChannel[] Channels
+        internal byte[] Value
         {
-            get
-            {
-                if (_channels == null)
-                {
-                    _channels = new DmtxChannel[6];
-                    for (int i = 0; i < 6; i++)
-                    {
-                        _channels[i] = new DmtxChannel();
-                    }
-                }
-                return _channels;
-            }
+            get { return _value ?? (_value = new byte[4]); }
         }
     }
 }
